@@ -1,0 +1,13 @@
+[
+  { "url": "https://www.udemy.com", "shortId": "9VO2lS4Y" },
+  {
+    "urlCode": "D8Htje2j",
+    "longUrl": "https://www.udemy.com",
+    "shortUrl": "http://localhost:8000/D8Htje2j"
+  },
+  {
+    "urlCode": "2alDHmbb",
+    "longUrl": "https://www.udemy.com",
+    "shortUrl": "http://localhost:8000/2alDHmbb"
+  }
+]
