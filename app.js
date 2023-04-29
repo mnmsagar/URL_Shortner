@@ -12,6 +12,13 @@ const app = express();
 app.use(express.json());
 
 app.use("/", handler.router);
+app.all("*",(req,res)=>{
+	res.status(404).json({
+		status :"Failed",
+		message : "Can't find the URL"
+	});
+});
+
 
 module.exports = {
 	app,

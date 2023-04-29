@@ -1,9 +1,14 @@
+const fs = require("fs");
 module.exports = {
-
-
-	writeFileAsync: () => {
-		return new Promise((resolve,reject) => {
-
+	writeFileAsync: (data) => {
+		return new Promise((resolve, reject) => {
+			fs.writeFile(`${__dirname}/../models/data.json`, JSON.stringify(data), (err) => {
+				if (err) {
+					reject(err);
+				} else {
+					resolve("File written Successfully");
+				}
+			});
 		});
-	}
-}
+	},
+};
