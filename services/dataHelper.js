@@ -2,6 +2,7 @@ const fs = require("fs");
 const data = JSON.parse(fs.readFileSync(`${__dirname}/../models/data.json`));
 const randomstring = require("randomstring");
 const { writeFileAsync } = require("./fileHelper");
+const isUrlHttp = require("is-url-http");
 
 module.exports = {
 	writeToFile: (url) => {
@@ -30,10 +31,11 @@ module.exports = {
 		return object;
 	},
 
-	checkBody: (body) => {
+	checkBodyandURL: (body) => {
 		if (body.url) {
-			return true;
+			let isValidURl = isUrlHttp(body.url);
+			return isValidURl;
 		}
 		return false;
-	},
+	}
 };

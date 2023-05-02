@@ -1,20 +1,15 @@
 const dataHelper = require("../services/dataHelper.js");
 const isUrlHttp = require("is-url-http");
-const {checkBody} = require("../services/dataHelper.js");
 
 exports.addURL = (req, res) => {
-	if(!checkBody(req.body)){
+	if(!(dataHelper.checkBodyandURL(req.body))){
 		res.status(400).json({
 			status : "Failed",
-			message : "Either you haven't input anything or you are not entering URL"
-		});
+			hint_text : "Either no input or URL is not valid"
+		})
 		return;
 	}
-	let isValidUrl = isUrlHttp(req.body.url);
-	if (!isValidUrl) {
-		res.status(400).json({ status: "Failed", hint_text: "Check your URL, Enter a Valid URL" });
-		return;
-	}
+	
 	let obj = dataHelper.writeToFile(req.body.url);
 	res.status(200).json(obj);
 };
