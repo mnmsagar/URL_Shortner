@@ -4,7 +4,7 @@ const {checkBody} = require("../services/dataHelper.js");
 
 exports.addURL = (req, res) => {
 	if(!checkBody(req.body)){
-		res.status(401).json({
+		res.status(400).json({
 			status : "Failed",
 			message : "Either you haven't input anything or you are not entering URL"
 		});
@@ -12,7 +12,7 @@ exports.addURL = (req, res) => {
 	}
 	let isValidUrl = isUrlHttp(req.body.url);
 	if (!isValidUrl) {
-		res.status(404).json({ status: "Failed", hint_text: "Check your URL, Enter a Valid URL" });
+		res.status(400).json({ status: "Failed", hint_text: "Check your URL, Enter a Valid URL" });
 		return;
 	}
 	let obj = dataHelper.writeToFile(req.body.url);
@@ -33,8 +33,8 @@ exports.getLink = (req, res) => {
 		});
 		return;
 	}
-	// res.status(301).redirect(obj.longUrl);
-	res.status(201).send(obj);
+	res.redirect(301,obj.longUrl);
+	// res.status(201).send(obj);
 };
 
 

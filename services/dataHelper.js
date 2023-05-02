@@ -12,10 +12,7 @@ module.exports = {
 			shortUrl: `http://localhost:${process.env.PORT || 3000}/${id}`,
 		};
 		data.push(obj);
-		// Make it synchorous and convert it into a promise
-		// fs.writeFile(`${__dirname}/../models/data.json`, JSON.stringify(data), (err) => {
-		// 	console.log(err);
-		// });
+
 		writeFileAsync(data)
 			.then((result) => {
 				console.log(result);
@@ -32,21 +29,11 @@ module.exports = {
 		});
 		return object;
 	},
-	// urlCheck: (url) => {
-	// 	let value = urlCheck(url);
-	// 	if (value === true) {
-	// 		return url;
-	// 	} else {
-	// 		this.status.json({
-	// 			status: "Enter Correct URL",
-	// 		});
-	// 		return;
-	// 	}
-	// },
-	checkBody : (body)=>{
-		if(body.url){
+
+	checkBody: (body) => {
+		if (body.url) {
 			return true;
 		}
 		return false;
-	}
+	},
 };
