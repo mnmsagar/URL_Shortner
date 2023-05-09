@@ -1,10 +1,12 @@
 require("dotenv").config();
+
 const express = require("express");
 const handler = require("./routes/routes");
 
 const port = process.env.PORT || 3000;
 const hostname = "localhost";
 const app = express();
+// dbConnect().then(data=>{console.log(data)});
 
 // fs.readFile(`${__dirname}/data.json`,(err,data)=>{
 
