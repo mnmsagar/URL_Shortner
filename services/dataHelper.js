@@ -28,6 +28,7 @@ module.exports = {
 		const object = data.find((ele) => {
 			return ele.urlCode === id;
 		});
+		console.log(object);
 		return object;
 	},
 
