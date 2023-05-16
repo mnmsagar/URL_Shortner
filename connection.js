@@ -1,14 +1,19 @@
-const { MongoClient } = require("mongodb");
+const { MongoClient } = require('mongodb');
 
-const databaseName = "url";
-const url = "mongodb://0.0.0.0:27017/";
-const client = new MongoClient(url);
-
-async function dbConnect (){
-    const result = await client.connect();
-    db = result.db(databaseName);
-    return db.collection('urlshortner');
+let dbConnection;
+module.exports = {
+    connectToDb : (cb)=>{
+        const url = process.env.MONGO_URL;
+        MongoClient.connect('mongodb://0.0.0.0:27017/url')
+        .then((client)=>{
+            dbConnection = client.db();
+            
+            return cb()
+        })
+        .catch(err => { 
+            console.log(err);
+            return cb(err)
+        })
+    },
+    getDb : ()=> dbConnection
 }
-
-module.exports = dbConnect;
-
