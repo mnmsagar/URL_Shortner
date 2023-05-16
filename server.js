@@ -1,6 +1,16 @@
 const express = require("express");
-const { port, app, hostname } = require("./app");
+const { port, app } = require("./app");
+const { connectToDb } = require("./connection");
 
-app.listen(port, () => {
-	console.log(`Server is Running on PORT - ${port}`);
-});
+
+connectToDb((err) => {
+	if (!err) {
+		app.listen(port, () => {
+			console.log(`Server is running on port number - ${port}`);
+		})
+	}
+})
+
+
+
+
