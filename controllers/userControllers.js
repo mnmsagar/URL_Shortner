@@ -1,27 +1,21 @@
 require("dotenv").config();
-const { getDb } = require("../connection");
 const jwt = require("jsonwebtoken");
-const { addUserHelper } = require("../services/user.dataHelper");
-const {hash} = require('bcrypt');
+const { addUserHelper, matchPass, exisUser, tokenGeneration } = require("../services/user.dataHelper");
 
 
 
 exports.addUser = async (req, res) => {
-    const{email, password, name} = req.body;
-    const existingUser = await getDb().collection('users').findOne({email : email});
-    if(existingUser){
+    const { email } = req.body;
+    const existingUser = exisUser(email);
+    if (!existingUser) {
         res.status(404).json({
-            message : "User already Exists"
+            message: "User already Exists"
         })
         return;
     }
-    const hashedPassword = await hash(password, 10);
-    const user = {
-        email : email,
-        name : name,
-        password : hashedPassword
-    }
-    const token = await addUserHelper(user);
+    const obj = await addUserHelper(req.body);
+    const token = tokenGeneration(obj);
+    console.log(token);
     res.status(201).json({
         status: "success",
         hint: "successfully registered",
@@ -31,34 +25,28 @@ exports.addUser = async (req, res) => {
 
 exports.userlogin = async (req, res) => {
     const { email, password } = req.body;
-    console.log(req.body);
-    if (email && password) {
-        const user = await getDb().collection('users').findOne({ email: req.body.email });
-        if (user != null) {
-            if (user.email === req.body.email && user.password === req.body.password) {
-                const token = jwt.sign({ userID : user._id, email : user.email }, process.env.SECRET_KEY, { expiresIn: '5d' });
-                res.json({
-                    status: "success",
-                    hint: "logged in successfully",
-                    token: token
-                })
-            } else {
-                res.json({
-                    status: "failed",
-                    hint: "Either email or password is not correct"
-                })
-            }
-        } else {
-            res.json({
-                status: "Failed",
-                hint: "You are not registered user"
+    try {
+        const existingUser = await exisUser(email);
+        console.log(existingUser);
+        if (!existingUser) {
+            return res.status(404).json({
+                message: "User not found!"
             })
         }
+        const matchPassard = await matchPass(password);
+        if (!matchPassard) {
+            return res.status(400).json({
+                message: "Invalid credentials"
+            })
+        }
+        console.log(existingUser);
+        const token = tokenGeneration(existingUser);
+        res.status(201).json({ user: existingUser, token: token });
     }
-    else {
-        res.json({
-            status: "failed",
-            hint: "enter email and password"
+    catch (err) {
+        console.log(err);
+        res.status(500).json({
+            message: "something went wrong"
         })
     }
 }
