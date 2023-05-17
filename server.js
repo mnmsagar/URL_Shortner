@@ -1,5 +1,4 @@
 require('dotenv').config();
-const express = require("express");
 const { port, app } = require("./app");
 const { connectToDb } = require("./connection");
 
