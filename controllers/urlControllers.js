@@ -1,6 +1,5 @@
 const dataHelper = require("../services/dataHelper.js");
 const isUrlHttp = require("is-url-http");
-const dbConnect = require("../connection.js");
 
 exports.addURL = async (req, res) => {
 	if (!dataHelper.checkBodyandURL(req.body)) {
@@ -8,10 +7,8 @@ exports.addURL = async (req, res) => {
 			status: "Failed",
 			hint_text: "Either no input or URL is not valid",
 		});
-
-		return {error:"new Error"};
+		return { error: "new Error" };
 	}
-
 	let obj = await dataHelper.writeToFile(req.body.url);
 	res.status(200).send(obj);
 };
@@ -24,18 +21,17 @@ exports.getLink = async (req, res) => {
 		});
 	}
 	const obj = await dataHelper.getObjById(id);
-	if (obj === undefined) {
+	// we need to use null here not undefined (important) 
+	if (obj === null) {
 		res.status(404).json({
-			status: "Not Found any URL, Checck your ShortId",
+			status: "Not Found any URL, Check your ShortId",
 		});
-		return;
+		return { error: "new Error" };
 	}
 	res.redirect(301, obj.longUrl);
-	// res.status(201).send(obj);
 };
 
 exports.getAll = async (req, res) => {
-	let data = await dbConnect();
-	data = await data.find().toArray();
-	res.json(data);
-};
+	const data = await dataHelper.getAll();
+	res.send(data);
+}
