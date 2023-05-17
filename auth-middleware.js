@@ -1,18 +1,13 @@
-require("dotenv").config();
-const jwt = require('jsonwebtoken');
-const { getDb, connectToDb } = require('./connection');
-const {auth} = require("./services/auth.dataHelper");
-
-
+const { auth } = require("./services/auth.dataHelper");
 
 exports.checkUserAuth = async (req, res, next) => {
     const { authorization } = req.headers;
-    if (authorization && authorization.startsWith('Bearer ')) {
-        try{
-            const obj = auth(authorization);
-            req.user== await getDb().collection('urlshortner').findOne({userID : obj._id});
+    if (authorization && authorization.startsWith('Bearer')) {
+        try {
+            req.user = await auth(authorization);
+            // console.log(req.user);
             next();
-        }catch(error){
+        } catch (error) {
             console.log(error);
             res.json({
                 mesaage: "Unauthorised User"
