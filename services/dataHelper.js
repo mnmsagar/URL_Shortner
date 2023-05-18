@@ -1,9 +1,7 @@
-const fs = require("fs");
 const randomstring = require("randomstring");
 const { writeFileAsync } = require("./fileHelper");
 const isUrlHttp = require("is-url-http");
-const {getDb} = require("../connection");
-
+const { getDb } = require("../connection");
 
 
 module.exports = {
@@ -18,14 +16,16 @@ module.exports = {
 			...obj
 		}
 		await getDb().collection('urlshortner').insertOne(obj);
+		console.log(newObj);
 		return newObj;
-		 
+
 	},
-	getObjById:  async (id) => {
-		const obj =  await getDb().collection('urlshortner').findOne({urlCode : id});
+	getObjById: async (id) => {
+		const obj = await getDb().collection('urlshortner').findOne({ urlCode: id });
+		console.log(obj);
 		return obj;
 	},
-	
+
 	checkBodyandURL: (body) => {
 		if (body.url) {
 			let isValidURl = isUrlHttp(body.url);
