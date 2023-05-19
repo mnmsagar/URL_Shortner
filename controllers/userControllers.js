@@ -1,23 +1,28 @@
 require("dotenv").config();
-const jwt = require("jsonwebtoken");
-const { addUserHelper, matchPass, existUser, tokenGeneration } = require("../services/user.dataHelper");
+const { addUserHelper, matchPass, existUser, tokenGeneration, checkBody } = require("../services/user.dataHelper");
 
 exports.addUser = async (req, res) => {
-    const { email } = req.body;
-    const existingUser = await existUser(email);
-    if (existingUser) {
-        res.status(404).json({
-            message: "User already Exists"
+    const { email, password, name } = req.body;
+    const response = await checkBody(req.body);
+    if (response === true) {
+        const existingUser = await existUser(email);
+        if (existingUser) {
+            res.status(404).json({
+                message: "User already Exists"
+            })
+            return;
+        }
+        const obj = await addUserHelper(req.body);
+        const token = tokenGeneration(obj);
+        res.status(201).json({
+            status: "success",
+            hint: "successfully registered",
+            token: token
         })
-        return;
+    } else {
+        res.status(response.statusCode).json(response.message);
     }
-    const obj = await addUserHelper(req.body);
-    const token = tokenGeneration(obj);
-    res.status(201).json({
-        status: "success",
-        hint: "successfully registered",
-        token: token
-    })
+
 }
 
 exports.userlogin = async (req, res) => {
