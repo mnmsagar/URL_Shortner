@@ -1,3 +1,4 @@
 /node_modules
 models/data.json
 /coverage
+/.env
