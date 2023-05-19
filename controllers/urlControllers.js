@@ -2,6 +2,7 @@ const dataHelper = require("../services/dataHelper.js");
 const isUrlHttp = require("is-url-http");
 
 exports.addURL = async (req, res) => {
+	console.log("Hello");
 	if (!dataHelper.checkBodyandURL(req.body)) {
 		res.status(400).json({
 			status: "Failed",
@@ -10,6 +11,7 @@ exports.addURL = async (req, res) => {
 		return { error: "new Error" };
 	}
 	let obj = await dataHelper.writeToFile(req.body.url);
+	console.log(obj);
 	res.status(200).send(obj);
 };
 

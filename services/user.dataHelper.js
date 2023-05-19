@@ -15,16 +15,14 @@ exports.addUserHelper = async (body) => {
     const newObj = { ...obj };
     await getDb().collection('users').insertOne(obj);
     return obj;
-    // Generate JWT Token
 }
 
-exports.exisUser = async (email) => {
+exports.existUser = async (email) => {
     const obj = await getDb().collection('users').findOne({ email: email });
-    console.log(obj);
     return obj;
 }
 
-exports.matchPass = async (password) => {
+exports.matchPass = async (password,existingUser) => {
     const obj = await compare(password, existingUser.password);
     return obj;
 }
