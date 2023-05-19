@@ -1,5 +1,4 @@
 const randomstring = require("randomstring");
-const { writeFileAsync } = require("./fileHelper");
 const isUrlHttp = require("is-url-http");
 const { getDb } = require("../connection");
 
@@ -16,13 +15,11 @@ module.exports = {
 			...obj
 		}
 		await getDb().collection('urlshortner').insertOne(obj);
-		console.log(newObj);
 		return newObj;
 
 	},
 	getObjById: async (id) => {
 		const obj = await getDb().collection('urlshortner').findOne({ urlCode: id });
-		console.log(obj);
 		return obj;
 	},
 
