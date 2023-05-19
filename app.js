@@ -3,7 +3,6 @@ const cors = require("cors");
 const express = require("express");
 const urlhandler = require("./routes/urlroutes");
 const userhandler = require("./routes/userRoutes");
-const { connectToDb } = require("./connection");
 
 const port = process.env.PORT || 3000;
 const hostname = "localhost";
@@ -20,19 +19,6 @@ app.all("*", (req, res) => {
 		message: "Can't find the URL"
 	});
 });
-
-connectToDb(process.env.URI).then(() => {
-	try {
-		app.listen(port, () => {
-			console.log(`Server is started at port - ${port}`);
-		})
-	} catch (error) {
-		console.log("Can't connect to the server!");
-	}
-}).catch((error) => {
-	console.log("Invalid Database Connection");
-})
-
 
 module.exports = {
 	app,
