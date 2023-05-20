@@ -4,7 +4,7 @@ const { getDb } = require("../connection");
 
 
 module.exports = {
-	writeToFile: async (url) => {
+	writeToDb: async (url) => {
 		const id = randomstring.generate(8);
 		const obj = {
 			urlCode: id,
@@ -16,7 +16,6 @@ module.exports = {
 		}
 		await getDb().collection('urlshortner').insertOne(obj);
 		return newObj;
-
 	},
 	getObjById: async (id) => {
 		const obj = await getDb().collection('urlshortner').findOne({ urlCode: id });
