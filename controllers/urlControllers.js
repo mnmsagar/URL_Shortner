@@ -1,15 +1,14 @@
-const dataHelper = require("../services/dataHelper.js");
-const isUrlHttp = require("is-url-http");
+const {writeToDb, getObjById, checkBodyandURL} = require("../services/dataHelper.js");
 
 exports.addURL = async (req, res) => {
-	if (!dataHelper.checkBodyandURL(req.body)) {
+	if (!checkBodyandURL(req.body)) {
 		res.status(400).json({
 			status: "Failed",
 			hint_text: "Either no input or URL is not valid",
 		});
 		return { error: "new Error" };
 	}
-	let obj = await dataHelper.writeToFile(req.body.url);
+	let obj = await writeToDb(req.body.url);
 	res.status(200).send(obj);
 };
 
@@ -20,7 +19,7 @@ exports.getLink = async (req, res) => {
 			status: "Not found",
 		});
 	}
-	const obj = await dataHelper.getObjById(id);
+	const obj = await getObjById(id);
 	// we need to use null here not undefined (important) 
 	if (obj === null) {
 		res.status(404).json({
@@ -30,8 +29,3 @@ exports.getLink = async (req, res) => {
 	}
 	res.redirect(301, obj.longUrl);
 };
-
-exports.getAll = async (req, res) => {
-	const data = await dataHelper.getAll();
-	res.send(data);
-}
