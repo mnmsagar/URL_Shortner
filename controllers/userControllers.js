@@ -1,9 +1,9 @@
 require("dotenv").config();
-const { addUserHelper, matchPass, existUser, tokenGeneration, checkBody } = require("../services/user.dataHelper");
+const { addUserHelper, existUser, tokenGeneration, checkBody, existingUserAndPasswordCheck, isEmailValid } = require("../services/user.dataHelper");
 
 exports.addUser = async (req, res) => {
     const { email, password, name } = req.body;
-    const response = await checkBody(req.body);
+    const response = checkBody(req.body);
     if (response === true) {
         const existingUser = await existUser(email);
         if (existingUser) {
@@ -22,26 +22,26 @@ exports.addUser = async (req, res) => {
     } else {
         res.status(response.statusCode).json(response.message);
     }
-
 }
 
 exports.userlogin = async (req, res) => {
     const { email, password } = req.body;
     try {
-        const existingUser = await existUser(email);
-        if (!existingUser) {
-            return res.status(404).json({
-                message: "User not found!"
+        if (isEmailValid(email)) {
+            const obj = await existingUserAndPasswordCheck(email, password);
+            if (obj.status) {
+                const token = tokenGeneration(obj.user);
+                res.status(200).json({ message: "Logged In Successfully", token: token });
+            } else {
+                res.status(404).json(obj);
+            }
+        } else {
+            res.status(404).json({
+                status: "failed",
+                message: "Invalid email type"
             })
         }
-        const matchPassword = await matchPass(password, existingUser);
-        if (!matchPassword) {
-            return res.status(400).json({
-                message: "Invalid credentials"
-            })
-        }
-        const token = tokenGeneration(existingUser);
-        res.status(201).json({ user: existingUser, token: token });
+
     }
     catch (err) {
         console.log(err);
