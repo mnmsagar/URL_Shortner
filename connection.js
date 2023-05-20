@@ -1,11 +1,13 @@
 const { MongoClient, Timestamp } = require('mongodb');
 
 let dbConnection;
+let client;
 module.exports = {
     connectToDb : async (dbUrl)=>{
-       const client =  await MongoClient.connect(dbUrl);
+       client =  await MongoClient.connect(dbUrl);
        console.log("Connected to Database");
        dbConnection = client.db('url');
     },
-    getDb : ()=> dbConnection
+    clientDB : ()=>{return client},  
+    getDb : ()=> {return dbConnection}
 }
