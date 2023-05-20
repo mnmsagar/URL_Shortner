@@ -1,6 +1,6 @@
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const { getObjById, writeToFile, checkBodyandURL } = require('../services/dataHelper');
-const { connectToDb, getDb } = require('../connection');
+const { connectToDb} = require('../connection');
 
 
   let mongoServer;
@@ -14,7 +14,7 @@ const { connectToDb, getDb } = require('../connection');
     await mongoServer.stop();
   });
 
-
+  
   describe('Check URL', () => {
     it("URL Checking when body is not present", () => {
       let body = {};
