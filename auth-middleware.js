@@ -8,14 +8,14 @@ exports.checkUserAuth = async (req, res, next) => {
             // console.log(req.user);
             next();
         } catch (error) {
-            res.status(404).json({
+            res.status(401).json({
                 mesaage: "Unauthorised User",
                 error : error
             })
         }
     }
     else {
-        res.status(404).json({
+        res.status(401).json({
             status: "Failed",
             hint: "Token not sent, Unauthorised User"
         })
