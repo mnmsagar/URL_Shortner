@@ -25,6 +25,7 @@
     "password-validator": "^5.3.0",
     "random-email": "^1.0.3",
     "randomstring": "^1.2.3",
+    "redis": "^4.6.6",
     "string-validator": "^1.0.5",
     "supertest": "^6.3.3"
   },
