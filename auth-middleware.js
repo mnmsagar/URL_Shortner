@@ -9,7 +9,7 @@ exports.checkUserAuth = async (req, res, next) => {
 			next();
 		} catch (error) {
 			res.status(401).json({
-				mesaage: "Unauthorised User",
+				message: "Unauthorised User",
 				error: error,
 			});
 		}

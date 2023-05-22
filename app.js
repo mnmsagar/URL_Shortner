@@ -16,14 +16,12 @@ app.use("/", urlhandler.router);
 app.all("*", (req, res) => {
 	res.status(404).json({
 		status: "Failed",
-		message: "Can't find the URL"
+		message: "Can't find the URL",
 	});
 });
 
 module.exports = {
 	app,
 	hostname,
-	port
+	port,
 };
-
-
