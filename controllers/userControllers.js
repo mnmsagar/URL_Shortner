@@ -6,7 +6,7 @@ const {
 	checkBody,
 	userAndPasswordCheck,
 } = require("../services/user.dataHelper");
-const { isValidEmail } = require("../utils/utils");
+const { isValidEmail, createPasswordResetToken } = require("../utils/utils");
 
 exports.addUser = async (req, res) => {
 	const { email } = req.body;
@@ -46,13 +46,36 @@ exports.userlogin = async (req, res) => {
 			res.status(401).json(obj);
 			return;
 		}
-		console.log(obj);
 		const token = tokenGeneration(obj);
 		res.status(200).json({ message: "Logged In Successfully", token: token });
 	} catch (err) {
 		console.log(err);
 		res.status(500).json({
-			message: "something went wrong",
+			message: "Something went wrong",
 		});
 	}
+};
+
+// exports.forgotPassword = async (req, res, next) => {
+// 	const {email} = req.body;
+// 	// 1. Get user based on posted email
+// 	const user = await getDb().collection('users').findOne({email});
+// 	if(!user){
+// 		res.status(404).json({
+// 			message : "user not found"
+// 		});
+// 	}
+// 	// 2. Generate the random reset token
+// 	const resetToken = createPasswordResetToken();
+// 	// 3. Send it to the user's mail
+// };
+
+// exports.resetPassword = (req, res, next) => {};
+
+exports.emailVerification = async (req, res) => {
+	console.log(req.params);
+	console.log(req.body);
+	res.json({
+		message: "Hello",
+	});
 };
