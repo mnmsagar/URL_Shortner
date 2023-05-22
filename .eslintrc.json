@@ -12,13 +12,15 @@
 	},
 	"rules": {
 		"indent": ["error", "tab"],
-
 		"quotes": ["error", "double"],
-		"semi": ["error", "always"]
+		"semi": ["error", "always"],
+		"no-unused-vars":  "error"
 	},
 
 	"globals": {
 		"process": "readonly",
 		"__dirname": "readonly"
-	}
+	},
+	"plugins": ["jest"]
+
 }
