@@ -45,7 +45,7 @@ exports.checkBody = (body) => {
 	if (!isValidPassword(password)) {
 		return {
 			message:
-				"Invalid password, Password should contains : min length of 8 characters, max of 100 characters, Must have uppercase letters, must have lowercase letters, must have atleast 2 digits, should not have any spaces",
+				"Invalid password, Password should contain : min length of 8 characters, max of 100 characters, Must have uppercase letters, must have lowercase letters, must have at least 2 digits, should not have any spaces",
 			statusCode: 400,
 		};
 	}
@@ -54,7 +54,10 @@ exports.checkBody = (body) => {
 
 exports.userAndPasswordCheck = async (email, password) => {
 	password = hashPassword(password);
-	const result = await getDb().collection("users").findOne({ email: email, password: password }, { email: 1 });
+	// console.log(password);
+	const result = await getDb()
+		.collection("users")
+		.findOne({ email: email, password: password }, { projection: { _id: 1, email: 1 } });
 	if (!result) {
 		return {
 			message: "Invalid Credentials",
