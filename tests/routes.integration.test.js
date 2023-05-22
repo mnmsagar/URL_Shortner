@@ -2,7 +2,7 @@ require("dotenv").config();
 const request = require("supertest");
 const { app } = require("../app");
 const { beforeAll, afterAll } = require("@jest/globals");
-const { connectToDb, getDb, clientDB } = require("../connection");
+const { connectToDb, getDb, getClient } = require("../connection");
 
 const mockUserData = {
 	name: "Sagar Mishra",
@@ -26,7 +26,7 @@ describe("Tests", () => {
 		const db = getDb();
 		await db.collection("users").deleteMany({ email: "sagar785mishra@gmail.com" });
 		await db.collection("urlshortner").deleteMany({ longUrl: "https://www.google.com" });
-		await clientDB().close();
+		await getClient().close();
 	});
 
 	it("When user tries to signUp it will return object", async () => {
