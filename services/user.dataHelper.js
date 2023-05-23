@@ -18,7 +18,7 @@ exports.addUserHelper = async (body) => {
 		delete obj._id;
 		return obj;
 	} catch (error) {
-		console.error("An error occurred while inserting the user: ", error);
+		console.error("An error occurred: ", error);
 		throw error;
 	}
 };

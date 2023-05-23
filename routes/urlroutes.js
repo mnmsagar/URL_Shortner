@@ -4,7 +4,7 @@ const { checkUserAuth } = require("../auth-middleware");
 
 const router = express.Router();
 
-// router.use("/shorten", checkUserAuth);
+router.use("/shorten", checkUserAuth);
 
 router.route("/:id").get(getLink);
 router.route("/shorten").post(addURL);
