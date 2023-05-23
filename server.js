@@ -13,6 +13,5 @@ connectToDb(process.env.URI)
 		}
 	})
 	.catch((error) => {
-		console.log(error);
-		console.log("Invalid Database Connection");
+		console.error(error);
 	});
