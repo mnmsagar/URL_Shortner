@@ -2,6 +2,8 @@ require("dotenv").config();
 const { getDb } = require("../connection");
 const jwt = require("jsonwebtoken");
 const { isValidPassword, isValidString, isValidEmail, hashPassword } = require("../utils/utils");
+const otpGenerator = require("otp-generator");
+const { sendVerificationMail } = require("../utils/email");
 
 exports.addUserHelper = async (body) => {
 	try {
@@ -69,4 +71,33 @@ exports.userAndPasswordCheck = async (email, password) => {
 		};
 	}
 	return result;
+};
+
+exports.userMail = async (body) => {
+	let { email, password, name } = body;
+	let otp = otpGenerator.generate(6, {
+		upperCaseAlphabets: false,
+		specialChars: false,
+		lowerCaseAlphabets: false,
+	});
+	await sendVerificationMail(email, otp, name);
+	password = hashPassword(password);
+	otp = hashPassword(otp);
+	const user = {
+		name,
+		email,
+		password,
+		otp,
+	};
+	await getDb().collection("otp").insertOne(user);
+};
+
+exports.verifyHandler = async (body) => {
+	const { email, otp } = body;
+	const user = await getDb()
+		.collection("otp")
+		.findOne({ email: email, otp: hashPassword(otp) });
+	delete user.otp;
+	await getDb().collection("users").insertOne(user);
+	await getDb().collection("otp").deleteMany({});
 };
