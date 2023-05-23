@@ -4,22 +4,20 @@ const { getDb } = require("../connection");
 
 module.exports = {
 	writeToDb: async (url) => {
-		const id = randomstring.generate(8);
-		const obj = {
-			urlCode: id,
-			longUrl: url,
-			shortUrl: `http://localhost:${process.env.PORT || 3000}/${id}`,
-		};
-		const newObj = {
-			...obj,
-		};
-		const result = await getDb().collection("urlshortner").insertOne(obj);
-		if (!result.acknowledged) {
-			return {
-				message: "Database disconnected",
+		try {
+			const id = randomstring.generate(8);
+			const obj = {
+				urlCode: id,
+				longUrl: url,
+				shortUrl: `http://localhost:${process.env.PORT || 3000}/${id}`,
 			};
+			await getDb().collection("urlshortner").insertOne(obj);
+			delete obj._id;
+			return obj;
+		} catch (error) {
+			console.error("Error Occurred");
+			throw error;
 		}
-		return newObj;
 	},
 	getObjById: async (id) => {
 		const obj = await getDb().collection("urlshortner").findOne({ urlCode: id });

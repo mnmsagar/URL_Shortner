@@ -4,18 +4,23 @@ const jwt = require("jsonwebtoken");
 const { isValidPassword, isValidString, isValidEmail, hashPassword } = require("../utils/utils");
 
 exports.addUserHelper = async (body) => {
-	const { email, password, name } = body;
-	const hashedPassword = hashPassword(password);
-	const user = {
-		email: email,
-		name: name,
-		password: hashedPassword,
-	};
-	const obj = user;
-	// const newObj = { ...obj };
-	await getDb().collection("users").insertOne(obj);
-	delete obj._id;
-	return obj;
+	try {
+		const { email, password, name } = body;
+		const hashedPassword = hashPassword(password);
+		const user = {
+			email: email,
+			name: name,
+			password: hashedPassword,
+		};
+		const obj = user;
+		// const newObj = { ...obj };
+		await getDb().collection("users").insertOne(obj);
+		delete obj._id;
+		return obj;
+	} catch (error) {
+		console.error("An error occurred while inserting the user: ", error);
+		throw error;
+	}
 };
 
 exports.existUser = async (email) => {
@@ -63,6 +68,5 @@ exports.userAndPasswordCheck = async (email, password) => {
 			message: "Invalid Credentials",
 		};
 	}
-	console.log(result);
 	return result;
 };

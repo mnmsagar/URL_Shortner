@@ -7,7 +7,7 @@ router.route("/reg").post(addUser);
 router.route("/login").post(userlogin);
 // router.route("/forgotPassword").post(forgotPassword);
 // router.route("/resetPassword").post(resetPassword);
-router.route("/verify-email/:id").get(emailVerification);
+router.route("/verify-email").post(emailVerification);
 
 
 module.exports = {

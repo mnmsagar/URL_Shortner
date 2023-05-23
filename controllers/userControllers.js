@@ -6,12 +6,19 @@ const {
 	checkBody,
 	userAndPasswordCheck,
 } = require("../services/user.dataHelper");
-const { isValidEmail, createPasswordResetToken } = require("../utils/utils");
+const { sendVerificationMail } = require("../utils/email");
+const { isValidEmail } = require("../utils/utils");
+const otpGenerator = require("otp-generator");
 
 exports.addUser = async (req, res) => {
-	const { email } = req.body;
-	const response = checkBody(req.body);
-	if (response === true) {
+	try {
+		const { email } = req.body;
+		const result = checkBody(req.body);
+
+		if (result.message) {
+			res.status(result.statusCode).json(result.message);
+			return;
+		}
 		const existingUser = await existUser(email);
 		if (existingUser) {
 			res.status(409).json({
@@ -26,8 +33,11 @@ exports.addUser = async (req, res) => {
 			hint: "successfully registered",
 			token: token,
 		});
-	} else {
-		res.status(response.statusCode).json(response.message);
+	} catch (error) {
+		res.status(500).json({
+			message: "Something went wrong",
+			error,
+		});
 	}
 };
 
@@ -48,10 +58,10 @@ exports.userlogin = async (req, res) => {
 		}
 		const token = tokenGeneration(obj);
 		res.status(200).json({ message: "Logged In Successfully", token: token });
-	} catch (err) {
-		console.log(err);
+	} catch (error) {
 		res.status(500).json({
 			message: "Something went wrong",
+			error,
 		});
 	}
 };
@@ -73,9 +83,10 @@ exports.userlogin = async (req, res) => {
 // exports.resetPassword = (req, res, next) => {};
 
 exports.emailVerification = async (req, res) => {
-	console.log(req.params);
-	console.log(req.body);
+	const { name, email, password } = req.body;
+	const otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false });
+	sendVerificationMail(email, otp, name);
 	res.json({
-		message: "Hello",
+		message: "sent",
 	});
 };
