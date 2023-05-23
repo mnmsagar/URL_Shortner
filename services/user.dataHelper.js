@@ -5,25 +5,25 @@ const { isValidPassword, isValidString, isValidEmail, hashPassword } = require("
 const otpGenerator = require("otp-generator");
 const { sendVerificationMail } = require("../utils/email");
 
-exports.addUserHelper = async (body) => {
-	try {
-		const { email, password, name } = body;
-		const hashedPassword = hashPassword(password);
-		const user = {
-			email: email,
-			name: name,
-			password: hashedPassword,
-		};
-		const obj = user;
-		// const newObj = { ...obj };
-		await getDb().collection("users").insertOne(obj);
-		delete obj._id;
-		return obj;
-	} catch (error) {
-		console.error("An error occurred: ", error);
-		throw error;
-	}
-};
+// exports.addUserHelper = async (body) => {
+// 	try {
+// 		const { email, password, name } = body;
+// 		const hashedPassword = hashPassword(password);
+// 		const user = {
+// 			email: email,
+// 			name: name,
+// 			password: hashedPassword,
+// 		};
+// 		const obj = user;
+// 		// const newObj = { ...obj };
+// 		await getDb().collection("users").insertOne(obj);
+// 		delete obj._id;
+// 		return obj;
+// 	} catch (error) {
+// 		console.error("An error occurred: ", error);
+// 		throw error;
+// 	}
+// };
 
 exports.existUser = async (email) => {
 	const obj = await getDb().collection("users").findOne({ email: email });
@@ -82,22 +82,26 @@ exports.userMail = async (body) => {
 	});
 	await sendVerificationMail(email, otp, name);
 	password = hashPassword(password);
-	otp = hashPassword(otp);
 	const user = {
 		name,
 		email,
 		password,
 		otp,
+		isRegistered: false,
 	};
-	await getDb().collection("otp").insertOne(user);
+	await getDb().collection("users").insertOne(user);
 };
 
 exports.verifyHandler = async (body) => {
-	const { email, otp } = body;
-	const user = await getDb()
-		.collection("otp")
-		.findOne({ email: email, otp: hashPassword(otp) });
-	delete user.otp;
-	await getDb().collection("users").insertOne(user);
-	await getDb().collection("otp").deleteMany({});
+	const { otp, email } = body;
+	const user = await getDb().collection("users").findOne({ otp, email });
+	if (!user) {
+		return { message: "Either email are OTP are incorrect, Please Check" };
+	}
+	await getDb()
+		.collection("users")
+		.updateOne({ email: email }, { $set: { isRegistered: true }, $unset: { otp: 1 } });
+
+	// await getDb().collection("users").updateOne({email:email},{$unset:{otp:1}});
+	return { message: "Registration Successful" };
 };

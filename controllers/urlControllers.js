@@ -10,11 +10,13 @@ exports.addURL = async (req, res) => {
 			return { error: "new Error" };
 		}
 		let obj = await writeToDb(req.body.url);
+		console.log(obj);
 		res.status(200).send(obj);
 	} catch (error) {
+		console.error(error);
 		res.status(500).json({
 			message: "Something went wrong",
-			error,
+			error: error.message,
 		});
 	}
 };
