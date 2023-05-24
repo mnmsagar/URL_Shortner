@@ -1,6 +1,8 @@
 const { validate } = require("email-validator");
 const passwordValidator = require("password-validator");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
+const otpGenerator = require("otp-generator");
 
 exports.isValidString = (str) => {
 	if (str.trim().length === 0) {
@@ -41,4 +43,18 @@ exports.hashPassword = (password) => {
 
 exports.isValidEmail = (email) => {
 	return validate(email);
+};
+
+exports.tokenGeneration = (obj) => {
+	const token = jwt.sign({ email: obj.email, userID: obj._id }, process.env.SECRET_KEY);
+	return token;
+};
+
+exports.otpGenerator = () => {
+	const generatedOTP = otpGenerator.generate(6, {
+		upperCaseAlphabets: false,
+		specialChars: false,
+		lowerCaseAlphabets: false,
+	});
+	return generatedOTP;
 };
