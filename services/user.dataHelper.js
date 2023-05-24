@@ -1,38 +1,31 @@
 require("dotenv").config();
 const { getDb } = require("../connection");
-const jwt = require("jsonwebtoken");
-const { isValidPassword, isValidString, isValidEmail, hashPassword } = require("../utils/utils");
-const otpGenerator = require("otp-generator");
+const { isValidPassword, isValidString, isValidEmail, hashPassword, otpGenerator } = require("../utils/utils");
 const { sendVerificationMail } = require("../utils/email");
 
-// exports.addUserHelper = async (body) => {
-// 	try {
-// 		const { email, password, name } = body;
-// 		const hashedPassword = hashPassword(password);
-// 		const user = {
-// 			email: email,
-// 			name: name,
-// 			password: hashedPassword,
-// 		};
-// 		const obj = user;
-// 		// const newObj = { ...obj };
-// 		await getDb().collection("users").insertOne(obj);
-// 		delete obj._id;
-// 		return obj;
-// 	} catch (error) {
-// 		console.error("An error occurred: ", error);
-// 		throw error;
-// 	}
-// };
+exports.addUserHelper = async (body) => {
+	try {
+		const { email, password, name } = body;
+		const hashedPassword = hashPassword(password);
+		const user = {
+			email: email,
+			name: name,
+			password: hashedPassword,
+		};
+		const obj = user;
+		// const newObj = { ...obj };
+		await getDb().collection("users").insertOne(obj);
+		delete obj._id;
+		return obj;
+	} catch (error) {
+		console.error("An error occurred: ", error);
+		throw error;
+	}
+};
 
 exports.existUser = async (email) => {
 	const obj = await getDb().collection("users").findOne({ email: email });
 	return obj;
-};
-
-exports.tokenGeneration = (obj) => {
-	const token = jwt.sign({ email: obj.email, userID: obj._id }, process.env.SECRET_KEY);
-	return token;
 };
 
 exports.checkBody = (body) => {
@@ -61,7 +54,6 @@ exports.checkBody = (body) => {
 
 exports.userAndPasswordCheck = async (email, password) => {
 	password = hashPassword(password);
-	// console.log(password);
 	const result = await getDb()
 		.collection("users")
 		.findOne({ email: email, password: password }, { projection: { _id: 1, email: 1 } });
@@ -75,33 +67,37 @@ exports.userAndPasswordCheck = async (email, password) => {
 
 exports.userMail = async (body) => {
 	let { email, password, name } = body;
-	let otp = otpGenerator.generate(6, {
-		upperCaseAlphabets: false,
-		specialChars: false,
-		lowerCaseAlphabets: false,
-	});
-	await sendVerificationMail(email, otp, name);
-	password = hashPassword(password);
+	const otp = otpGenerator();
+	sendVerificationMail(email, otp, name);
+	const hashedPassword = hashPassword(password);
 	const user = {
 		name,
 		email,
-		password,
+		password: hashedPassword,
 		otp,
 		isRegistered: false,
 	};
-	await getDb().collection("users").insertOne(user);
+	const obj = await getDb().collection("users").insertOne(user);
+	if (!obj.acknowledged) {
+		throw Error("Insertion Failed!!");
+	}
+	// setTimeout(() => {
+	// 	getDb().collection("users").deleteOne({ email, otp });
+	// }, 50000);
 };
 
 exports.verifyHandler = async (body) => {
 	const { otp, email } = body;
 	const user = await getDb().collection("users").findOne({ otp, email });
 	if (!user) {
-		return { message: "Either email are OTP are incorrect, Please Check" };
+		return { message: "Either email are OTP are incorrect or OTP expired !!, Please Check" };
 	}
-	await getDb()
+	console.log(user);
+	const obj = await getDb()
 		.collection("users")
 		.updateOne({ email: email }, { $set: { isRegistered: true }, $unset: { otp: 1 } });
-
-	// await getDb().collection("users").updateOne({email:email},{$unset:{otp:1}});
+	if (!obj.acknowledged) {
+		throw new Error("Insertion Problem");
+	}
 	return { message: "Registration Successful" };
 };

@@ -2,13 +2,12 @@ require("dotenv").config();
 const {
 	addUserHelper,
 	existUser,
-	tokenGeneration,
 	checkBody,
 	userAndPasswordCheck,
 	userMail,
 	verifyHandler,
 } = require("../services/user.dataHelper");
-const { isValidEmail } = require("../utils/utils");
+const { isValidEmail,tokenGeneration } = require("../utils/utils");
 
 // exports.addUser = async (req, res) => {
 // 	try {
@@ -61,7 +60,7 @@ exports.userlogin = async (req, res) => {
 	} catch (error) {
 		res.status(500).json({
 			message: "Something went wrong",
-			error,
+			error : error.message,
 		});
 	}
 };
