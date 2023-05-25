@@ -6,8 +6,9 @@ const {
 	userAndPasswordCheck,
 	userMail,
 	verifyHandler,
+	resendOtpHandler,
 } = require("../services/user.dataHelper");
-const { isValidEmail,tokenGeneration } = require("../utils/utils");
+const { isValidEmail, tokenGeneration } = require("../utils/utils");
 
 // exports.addUser = async (req, res) => {
 // 	try {
@@ -60,19 +61,20 @@ exports.userlogin = async (req, res) => {
 	} catch (error) {
 		res.status(500).json({
 			message: "Something went wrong",
-			error : error.message,
+			error: error.message,
 		});
 	}
 };
 
 exports.signUp = async (req, res) => {
 	try {
-		let { email } = req.body;
+		const { email } = req.body;
 		const result = checkBody(req.body);
 		if (result.message) {
 			res.status(result.statusCode).json(result.message);
 			return;
 		}
+
 		const existingUser = await existUser(email);
 		if (existingUser) {
 			res.status(409).json({
@@ -80,7 +82,6 @@ exports.signUp = async (req, res) => {
 			});
 			return;
 		}
-
 		await userMail(req.body);
 		res.status(200).json({
 			message: `A OTP has been sent to you via your mail address, Please enter the OTP to get authenticated. Please use this link to enter your otp : http://localhost/${process.env.PORT}/users/verify-email`,
@@ -88,7 +89,6 @@ exports.signUp = async (req, res) => {
 	} catch (error) {
 		res.status(500).json({
 			message: "something went wrong",
-			error: error.stack,
 		});
 	}
 };
@@ -96,13 +96,29 @@ exports.signUp = async (req, res) => {
 exports.verifyMail = async (req, res) => {
 	try {
 		const obj = await verifyHandler(req.body);
-		res.status(201).json({
+		res.status(obj.statusCode).json({
 			message: obj.message,
+			token: obj.token,
 		});
 	} catch (error) {
 		res.status(500).json({
 			message: "something went wrong",
-			error: error.stack,
+		});
+	}
+};
+
+exports.resendOtp = async (req, res) => {
+	try {
+		const { email } = req.body;
+		if (!email) {
+			res.status(400).json({ message: "Enter email please!" });
+			return;
+		}
+		const resendObj = await resendOtpHandler(req.body);
+		res.status(resendObj.statusCode).json(resendObj.message);
+	} catch (error) {
+		res.status(500).json({
+			message: "something went wrong",
 		});
 	}
 };
