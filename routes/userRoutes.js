@@ -1,9 +1,5 @@
 const express = require("express");
-const {
-	userlogin,
-	signUp,
-	verifyMail,
-} = require("../controllers/userControllers");
+const { userlogin, signUp, verifyMail, resendOtp } = require("../controllers/userControllers");
 
 const router = express.Router();
 
@@ -13,6 +9,7 @@ router.route("/login").post(userlogin);
 // router.route("/forgotPassword").post(forgotPassword);
 // router.route("/resetPassword").post(resetPassword);
 router.route("/verify-email").post(verifyMail);
+router.route("/resendotp").post(resendOtp);
 
 module.exports = {
 	router,
