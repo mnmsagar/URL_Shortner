@@ -1,4 +1,4 @@
-const { writeToDb, getObjById, checkBodyandURL } = require("../services/dataHelper.js");
+const { writeToDb, getObjById, checkBodyandURL } = require("../services/dataHelper");
 
 exports.addURL = async (req, res) => {
 	try {
@@ -15,8 +15,7 @@ exports.addURL = async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		res.status(500).json({
-			message: "Something went wrong",
-			error: error.message,
+			message: "Something went wrong"
 		});
 	}
 };
@@ -41,8 +40,7 @@ exports.getLink = async (req, res) => {
 		res.redirect(301, obj.longUrl);
 	} catch (error) {
 		res.status(500).json({
-			message: "Something went wrong!",
-			error: error.stack,
+			message: "Something went wrong!"
 		});
 	}
 };
