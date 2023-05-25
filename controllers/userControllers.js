@@ -1,6 +1,6 @@
 require("dotenv").config();
 const {
-	addUserHelper,
+	// addUserHelper,
 	existUser,
 	checkBody,
 	userAndPasswordCheck,
@@ -82,9 +82,15 @@ exports.signUp = async (req, res) => {
 			});
 			return;
 		}
-		await userMail(req.body);
-		res.status(200).json({
-			message: `A OTP has been sent to you via your mail address, Please enter the OTP to get authenticated. Please use this link to enter your otp : http://localhost/${process.env.PORT}/users/verify-email`,
+		const obj = await userMail(req.body);
+		if (obj.statusCode === 500) {
+			res.status(obj.statusCode).json({
+				message: obj.message,
+			});
+			return;
+		}
+		res.status(obj.statusCode).json({
+			message: obj.message,
 		});
 	} catch (error) {
 		res.status(500).json({

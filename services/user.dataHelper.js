@@ -78,8 +78,11 @@ exports.userAndPasswordCheck = async (email, password) => {
 exports.userMail = async (body) => {
 	let { email, password, name } = body;
 	const otp = otpGenerator();
-	sendVerificationMail(email, otp, name);
 	const hashedPassword = hashPassword(password);
+	const emailsent = sendVerificationMail(email, otp);
+	if (!emailsent) {
+		return { statusCode: 500, message: "email sending error" };
+	}
 	const user = {
 		name,
 		email,
@@ -100,35 +103,39 @@ exports.userMail = async (body) => {
 	if (!otpInsert.acknowledged) {
 		throw Error("Insertion Failed!!");
 	}
+	return {
+		statusCode: 201,
+		message: "A OTP has been sent to you via your mail address, Please enter the OTP to get authenticated.",
+	};
 };
 
 exports.verifyHandler = async (body) => {
 	const { otp, email } = body;
 	const originalUser = await getDb().collection("users").findOne({ email });
 	if (!originalUser) {
-		return { statusCode: 400, message: "Please Signup to get verified!!" };
+		return { statusCode: 400, message: "Please Signup first to get verified!!" };
 	}
 	if (originalUser.isRegistered) {
-		return { statusCode: 400, message: "Already Registered" };
+		return { statusCode: 409, message: "Already Registered" };
 	}
 	if (!otp || !email) {
 		return { statusCode: 400, message: "Please give otp and email both" };
 	}
-	const user = await getDb().collection("otp").findOne({ email, otp });
-	if (!user) {
+	const userOtp = await getDb().collection("otp").findOne({ email, otp });
+	if (!userOtp) {
 		return {
-			statusCode: 401,
+			statusCode: 400,
 			message: "Either email or OTP are incorrect or OTP or User not found!!, Please Check",
 		};
 	}
-	if (user.expireAt < Date.now()) {
-		await getDb().collection("otp").deleteOne(user);
-		return { statusCode: 401, message: "OTP Expired" };
+	if (userOtp.expireAt < Date.now()) {
+		await getDb().collection("otp").deleteOne(userOtp);
+		return { statusCode: 403, message: "OTP Expired" };
 	}
 	const updatedObj = await getDb()
 		.collection("users")
 		.updateOne({ email: email }, { $set: { isRegistered: true } });
-	if (!updatedObj.matchedCount && !updatedObj.modifiedCount) {
+	if (!updatedObj.matchedCount || !updatedObj.modifiedCount) {
 		throw new Error("Updation Problem");
 	}
 	const token = tokenGeneration({ email: originalUser.email, _id: originalUser._id });
@@ -143,14 +150,11 @@ exports.resendOtpHandler = async (body) => {
 	const { email } = body;
 	const otpObj = await getDb().collection("otp").findOne({ email });
 	const otp = otpGenerator();
-	sendVerificationMail(email, otp, "Sagar Mishra");
+	sendVerificationMail(email, otp);
 	if (!otpObj) {
-		getDb()
-			.collection("otp")
-			.insertOne({ email: email, otp: otp, createdAt: Date.now(), expireAt: Date.now() + 120000 });
 		return {
-			statusCode: 201,
-			message: "OTP resend successfully",
+			statusCode: 403,
+			message: "Session expired, Please Signup again",
 		};
 	}
 	getDb()
