@@ -22,6 +22,7 @@
     "is-url": "^1.2.4",
     "is-url-http": "^2.3.5",
     "jsonwebtoken": "^9.0.0",
+    "md5": "^2.3.0",
     "node-fetch": "^2.6.11",
     "node-mailjet": "^6.0.2",
     "nodemailer": "^6.9.2",
