@@ -83,17 +83,17 @@ exports.userMail = async (body) => {
 	if (!otpInsert.acknowledged) {
 		throw Error("OTP Insertion Error in userMail!!");
 	}
-	await sendVerificationMail(email, otp);
+	await sendVerificationMail(email, otp, name);
 	return createdResp("A OTP has been sent to you via your mail address, Please enter the OTP to get authenticated.");
 };
 
 exports.verifyUser = async (body) => {
 	const { otp, email } = body;
-	const OriginalUser1 = await existingUser(email);
-	if (!OriginalUser1) {
+	const userExisting = await existingUser(email);
+	if (!userExisting) {
 		return badRequest("Please Signup first to get verified!!");
 	}
-	if (OriginalUser1.isRegistered) {
+	if (userExisting.isRegistered) {
 		return { statusCode: 409, message: "Already Registered" };
 	}
 	if (!otp || !email) {
@@ -109,7 +109,7 @@ exports.verifyUser = async (body) => {
 	if (!updatedObj.matchedCount || !updatedObj.modifiedCount) {
 		throw new Error("Updation Error in verifyUser");
 	}
-	const token = tokenGeneration({ email: OriginalUser1.email, _id: OriginalUser1._id });
+	const token = tokenGeneration({ email: userExisting.email, _id: userExisting._id });
 	const deletedOTP = await getDb().collection("otp").deleteOne({ email });
 	if (!deletedOTP.deletedCount || !deletedOTP.acknowledged) {
 		throw Error("Deletion Error in verifyUser!!");
@@ -119,10 +119,9 @@ exports.verifyUser = async (body) => {
 
 exports.resendOtp = async (body) => {
 	const { email } = body;
-	const user = existingUser(email);
-	const otpObj = existingOTPObj(email);
+	const user = await existingUser(email);
+	const otpObj = await existingOTPObj(email);
 	const otp = otpGenerator();
-
 	if (!user) {
 		return badRequest("Session expired or user not signedUp");
 	}
@@ -143,6 +142,6 @@ exports.resendOtp = async (body) => {
 	if (!updatedOtp.matchedCount || !updatedOtp.modifiedCount) {
 		throw new Error("OTP updation error in resendOtp");
 	}
-	await sendVerificationMail(email, otp);
+	await sendVerificationMail(email, otp, user.name);
 	return createdResp("OTP resend successfully");
 };
