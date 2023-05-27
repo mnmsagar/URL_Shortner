@@ -4,6 +4,9 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const otpGenerator = require("otp-generator");
 
+const myHeaders = new Headers();
+myHeaders.append("apikey", "HxPQ1Yt9Kbe3I34XE8pUcsWfSi64DUxE");
+
 exports.isValidString = (str) => {
 	if (str.trim().length === 0) {
 		return false;
@@ -91,7 +94,7 @@ exports.okReq = (message) => {
 	};
 };
 
-exports.findOTP = (str) => {
+const findOTP = (str) => {
 	let otp = "";
 	for (let i = 0; i < str.length; i++) {
 		let currentChar = parseInt(str[i]);
@@ -105,4 +108,22 @@ exports.findOTP = (str) => {
 		}
 	}
 	return "No OTP found";
+};
+
+const requestOptions = {
+	method: "GET",
+	redirect: "follow",
+	headers: myHeaders,
+};
+
+exports.fetchData = async (hashed_mail) => {
+	try {
+		const response = await fetch(`https://api.apilayer.com/temp_mail/mail/id/${hashed_mail}`, requestOptions);
+		const result = await response.text();
+		const data = JSON.parse(result);
+		const otp = findOTP(data[data.length - 1].mail_text);
+		return otp;
+	} catch (error) {
+		console.log("error", error);
+	}
 };
