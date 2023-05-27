@@ -133,7 +133,7 @@ exports.resendOtp = async (body) => {
 			.collection("otp")
 			.insertOne({ email: email, otp: otp, expiresAt: new Date() });
 		if (!insertedOtp.acknowledged) {
-			throw new Error("OTP insertion error in resendOtp");
+			throw new Error("OTP insertion error in resendOtp!!");
 		}
 	}
 	const updatedOtp = await getDb()
