@@ -8,26 +8,15 @@ const {
 	otpGenerator,
 	tokenGeneration,
 } = require("../utils/utils");
-const { notFoundReq, unAuthorisedReq, badRequest, createdReq, okReq } = require("../utils/utils");
+const { badRequest, createdResp } = require("../utils/utils");
 const { sendVerificationMail } = require("../utils/email");
 
 const existingUser = async (email) => {
 	const obj = await getDb().collection("users").findOne({ email: email });
 	return obj;
 };
-
-exports.addUserHelper = async (body) => {
-	const { email, password, name } = body;
-	const hashedPassword = hashPassword(password);
-	const user = {
-		email: email,
-		name: name,
-		password: hashedPassword,
-	};
-	const obj = user;
-	// const newObj = { ...obj };
-	await getDb().collection("users").insertOne(obj);
-	delete obj._id;
+const existingOTPObj = async (email) => {
+	const obj = await getDb().collection("otp").findOne({ email: email });
 	return obj;
 };
 
@@ -39,16 +28,16 @@ exports.existUser = async (email) => {
 exports.checkBody = (body) => {
 	const { name, email, password } = body;
 	if (!name || !email || !password) {
-		badRequest("Enter valid name, email and password");
+		return badRequest("Invalid name, Please use characters only");
 	}
 	if (!isValidString(name)) {
-		badRequest("Invalid name, Please use characters only");
+		return badRequest("Invalid name, Please use characters only");
 	}
 	if (!isValidEmail(email)) {
-		badRequest("Invalid email, Please type correct email");
+		return badRequest("Invalid email, Please type correct email");
 	}
 	if (!isValidPassword(password)) {
-		badRequest(
+		return badRequest(
 			"Invalid password, Password should contain : min length of 8 characters, max of 100 characters, Must have uppercase letters, must have lowercase letters, must have at least 2 digits, should not have any spaces"
 		);
 	}
@@ -83,7 +72,7 @@ exports.userMail = async (body) => {
 	};
 	const userInsert = await getDb().collection("users").insertOne(user);
 	if (!userInsert.acknowledged) {
-		throw Error("User Insertion Failed!!");
+		throw Error("User Insertion Error in userMail!!");
 	}
 	const otpData = {
 		otp,
@@ -92,56 +81,68 @@ exports.userMail = async (body) => {
 	};
 	const otpInsert = await getDb().collection("otp").insertOne(otpData);
 	if (!otpInsert.acknowledged) {
-		throw Error("OTP Insertion Failed!!");
+		throw Error("OTP Insertion Error in userMail!!");
 	}
 	await sendVerificationMail(email, otp);
-	createdReq("A OTP has been sent to you via your mail address, Please enter the OTP to get authenticated.");
+	return createdResp("A OTP has been sent to you via your mail address, Please enter the OTP to get authenticated.");
 };
 
 exports.verifyUser = async (body) => {
 	const { otp, email } = body;
 	const OriginalUser1 = await existingUser(email);
-	console.log(OriginalUser1);
 	if (!OriginalUser1) {
-		badRequest("Please Signup first to get verified!!");
+		return badRequest("Please Signup first to get verified!!");
 	}
 	if (OriginalUser1.isRegistered) {
 		return { statusCode: 409, message: "Already Registered" };
 	}
 	if (!otp || !email) {
-		badRequest("Please give otp and email both");
+		return badRequest("Please give otp and email both");
 	}
 	const userOtp = await getDb().collection("otp").findOne({ email, otp });
 	if (!userOtp) {
-		badRequest("Either email or OTP are incorrect or OTP expired!!, Please Check");
+		return badRequest("Either email or OTP are incorrect or OTP expired!!, Please Check");
 	}
 	const updatedObj = await getDb()
 		.collection("users")
 		.updateOne({ email: email }, { $set: { isRegistered: true }, $unset: { expiresAt: 1 } });
 	if (!updatedObj.matchedCount || !updatedObj.modifiedCount) {
-		throw new Error("Updation Problem");
+		throw new Error("Updation Error in verifyUser");
 	}
 	const token = tokenGeneration({ email: OriginalUser1.email, _id: OriginalUser1._id });
 	const deletedOTP = await getDb().collection("otp").deleteOne({ email });
 	if (!deletedOTP.deletedCount || !deletedOTP.acknowledged) {
-		throw Error("Deletion Failed!!");
+		throw Error("Deletion Error in verifyUser!!");
 	}
 	return { statusCode: 201, message: "Registration Successful", token };
 };
 
 exports.resendOtp = async (body) => {
 	const { email } = body;
-	const otpObj = await getDb().collection("otp").findOne({ email });
+	const user = existingUser(email);
+	const otpObj = existingOTPObj(email);
 	const otp = otpGenerator();
-	sendVerificationMail(email, otp);
-	if (!otpObj) {
-		return {
-			statusCode: 403,
-			message: "Session expired, Please Signup again",
-		};
+
+	if (!user) {
+		return badRequest("Session expired or user not signedUp");
 	}
-	getDb()
+	if (user.isRegistered) {
+		return badRequest("User already registerted");
+	}
+	if (!otpObj) {
+		const insertedOtp = await getDb()
+			.collection("otp")
+			.insertOne({ email: email, otp: otp, expiresAt: new Date() });
+		if (!insertedOtp.acknowledged) {
+			throw new Error("OTP insertion error in resendOtp");
+		}
+	}
+	const updatedOtp = await getDb()
 		.collection("otp")
-		.updateOne({ email: email }, { $set: { otp: otp, createdAt: Date.now(), expireAt: Date.now() + 120000 } });
-	createdReq("OTP resend successfully");
+		.updateOne({ email: email }, { $set: { otp: otp } });
+	if (!updatedOtp.matchedCount || !updatedOtp.modifiedCount) {
+		throw new Error("OTP updation error in resendOtp");
+	}
+	await sendVerificationMail(email, otp);
+	return createdResp("OTP resend successfully");
 };
