@@ -4,10 +4,7 @@ const { userlogin, signUp, verifyMail, resendOtp } = require("../controllers/use
 const router = express.Router();
 
 router.route("/signup").post(signUp);
-// router.route("/reg").post(addUser);
 router.route("/login").post(userlogin);
-// router.route("/forgotPassword").post(forgotPassword);
-// router.route("/resetPassword").post(resetPassword);
 router.route("/verify-email").post(verifyMail);
 router.route("/resendotp").post(resendOtp);
 
