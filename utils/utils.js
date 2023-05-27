@@ -58,3 +58,51 @@ exports.otpGenerator = () => {
 	});
 	return generatedOTP;
 };
+
+exports.badRequest = (message) => {
+	return { message: message, statusCode: 400 };
+};
+
+exports.unAuthorisedReq = (message) => {
+	return {
+		message,
+		statusCode: 401,
+	};
+};
+
+exports.notFoundReq = (message) => {
+	return {
+		message,
+		statusCode: 404,
+	};
+};
+
+exports.createdReq = (message) => {
+	return {
+		message,
+		statusCode: 201,
+	};
+};
+
+exports.okReq = (message) => {
+	return {
+		message,
+		statusCode: 200,
+	};
+};
+
+exports.findOTP = (str) => {
+	let otp = "";
+	for (let i = 0; i < str.length; i++) {
+		let currentChar = parseInt(str[i]);
+		if (!isNaN(currentChar) && currentChar >= 0 && currentChar <= 9) {
+			otp += currentChar.toString();
+			if (otp.length === 6) {
+				return otp;
+			}
+		} else {
+			otp = "";
+		}
+	}
+	return "No OTP found";
+};
