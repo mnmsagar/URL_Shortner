@@ -7,6 +7,8 @@ module.exports = {
 		client = await MongoClient.connect(dbUrl);
 		console.log("Connected to Database");
 		dbConnection = client.db("url");
+		await dbConnection.collection("users").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 30 });
+		await dbConnection.collection("otp").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 20 });
 	},
 	getClient: () => {
 		return client;
