@@ -1,3 +1,4 @@
+require("dotenv").config();
 const randomstring = require("randomstring");
 const isUrlHttp = require("is-url-http");
 const { getDb } = require("../connection");
@@ -12,7 +13,7 @@ module.exports = {
 		};
 		const insertData = await getDb().collection("urlshortner").insertOne(obj);
 		if (!insertData.acknowledged) {
-			throw new Error("Insertion Failed");
+			throw new Error("Insertion Failed in URL writing in Db");
 		}
 		delete obj._id;
 		return obj;
