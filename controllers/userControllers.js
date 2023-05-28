@@ -1,11 +1,11 @@
 require("dotenv").config();
 const {
-	existUser,
 	checkBody,
 	userAndPasswordCheck,
 	userMail,
 	verifyUser,
 	resendOtp,
+	existingUser,
 } = require("../services/user.dataHelper");
 const { isValidEmail, tokenGeneration } = require("../utils/utils");
 
@@ -43,8 +43,8 @@ exports.signUp = async (req, res) => {
 			return;
 		}
 
-		const existingUser = await existUser(email);
-		if (existingUser) {
+		const existUser = await existingUser(email);
+		if (existUser) {
 			res.status(409).json({
 				message: "User already Exists",
 			});
