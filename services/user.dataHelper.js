@@ -1,13 +1,6 @@
 require("dotenv").config();
 const { getDb } = require("../connection");
-const {
-	isValidPassword,
-	isValidString,
-	isValidEmail,
-	hashPassword,
-	otpGenerator,
-	tokenGeneration,
-} = require("../utils/utils");
+const { isValidPassword, isValidString, isValidEmail, hashPassword, otpGenerator } = require("../utils/utils");
 const { badRequest, createdResp } = require("../utils/utils");
 const { sendVerificationMail } = require("../utils/email");
 
@@ -15,17 +8,8 @@ const existingUser = async (email) => {
 	const obj = await getDb().collection("users").findOne({ email: email });
 	return obj;
 };
-const existingOTPObj = async (email) => {
-	const obj = await getDb().collection("otp").findOne({ email: email });
-	return obj;
-};
 
-exports.existUser = async (email) => {
-	const obj = await getDb().collection("users").findOne({ email: email });
-	return obj;
-};
-
-exports.checkBody = (body) => {
+const checkBody = (body) => {
 	const { name, email, password } = body;
 	if (!name || !email || !password) {
 		return badRequest("Invalid name, Please use characters only");
@@ -44,7 +28,7 @@ exports.checkBody = (body) => {
 	return true;
 };
 
-exports.userAndPasswordCheck = async (email, password) => {
+const userAndPasswordCheck = async (email, password) => {
 	password = hashPassword(password);
 	const result = await getDb()
 		.collection("users")
@@ -57,12 +41,10 @@ exports.userAndPasswordCheck = async (email, password) => {
 	return result;
 };
 
-exports.userMail = async (body) => {
+const userMail = async (body) => {
 	let { email, password, name } = body;
 	const otp = otpGenerator();
 	const hashedPassword = hashPassword(password);
-	getDb().collection("users").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 600 });
-	getDb().collection("otp").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 120 });
 	const user = {
 		name,
 		email,
@@ -87,17 +69,19 @@ exports.userMail = async (body) => {
 	return createdResp("A OTP has been sent to you via your mail address, Please enter the OTP to get authenticated.");
 };
 
-exports.verifyUser = async (body) => {
+const verifyUser = async (body) => {
 	const { otp, email } = body;
+	if (!otp || !email) {
+		return badRequest("Invalid Body");
+	}
 	const userExisting = await existingUser(email);
 	if (!userExisting) {
-		return badRequest("Please Signup first to get verified!!");
+		return badRequest(
+			"Please Signup first to get verified!! Maybe you haven't registered yet or your session expired !!"
+		);
 	}
 	if (userExisting.isRegistered) {
 		return { statusCode: 409, message: "Already Registered" };
-	}
-	if (!otp || !email) {
-		return badRequest("Please give otp and email both");
 	}
 	const userOtp = await getDb().collection("otp").findOne({ email, otp });
 	if (!userOtp) {
@@ -109,18 +93,16 @@ exports.verifyUser = async (body) => {
 	if (!updatedObj.matchedCount || !updatedObj.modifiedCount) {
 		throw new Error("Updation Error in verifyUser");
 	}
-	const token = tokenGeneration({ email: userExisting.email, _id: userExisting._id });
 	const deletedOTP = await getDb().collection("otp").deleteOne({ email });
 	if (!deletedOTP.deletedCount || !deletedOTP.acknowledged) {
 		throw Error("Deletion Error in verifyUser!!");
 	}
-	return { statusCode: 201, message: "Registration Successful", token };
+	return createdResp("Registration Successful!!");
 };
 
-exports.resendOtp = async (body) => {
+const resendOtp = async (body) => {
 	const { email } = body;
 	const user = await existingUser(email);
-	const otpObj = await existingOTPObj(email);
 	const otp = otpGenerator();
 	if (!user) {
 		return badRequest("Session expired or user not signedUp");
@@ -128,20 +110,21 @@ exports.resendOtp = async (body) => {
 	if (user.isRegistered) {
 		return badRequest("User already registerted");
 	}
-	if (!otpObj) {
-		const insertedOtp = await getDb()
-			.collection("otp")
-			.insertOne({ email: email, otp: otp, expiresAt: new Date() });
-		if (!insertedOtp.acknowledged) {
-			throw new Error("OTP insertion error in resendOtp!!");
-		}
-	}
 	const updatedOtp = await getDb()
 		.collection("otp")
-		.updateOne({ email: email }, { $set: { otp: otp } });
-	if (!updatedOtp.matchedCount || !updatedOtp.modifiedCount) {
+		.updateOne({ email: email }, { $set: { otp: otp, expiresAt: new Date() } }, { upsert: true });
+	if ((!updatedOtp.matchedCount || !updatedOtp.modifiedCount) && !updatedOtp.upsertedCount) {
 		throw new Error("OTP updation error in resendOtp");
 	}
 	await sendVerificationMail(email, otp, user.name);
 	return createdResp("OTP resend successfully");
+};
+
+module.exports = {
+	existingUser,
+	checkBody,
+	userAndPasswordCheck,
+	userMail,
+	verifyUser,
+	resendOtp,
 };
