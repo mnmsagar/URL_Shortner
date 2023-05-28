@@ -173,7 +173,7 @@ describe("All tests", () => {
 	}, 6000);
 });
 
-describe("Test for verify function", () => {
+describe("All test flow wise", () => {
 	const mockUserData = {
 		name: "Sagar Mishra",
 		email: `${generate(7, {
@@ -196,8 +196,9 @@ describe("Test for verify function", () => {
 	};
 
 	afterAll(async () => {
-		getDb().collection("users").deleteOne({ email: mockUserData.email });
-		getDb().collection("otp").deleteOne({ email: mockUserData.email });
+		await getDb().collection("users").deleteOne({ email: mockUserData.email });
+		await getDb().collection("otp").deleteOne({ email: mockUserData.email });
+		await getDb().collection("urlshortner").deleteOne({ longUrl: "hhtps://www.google.com" });
 	});
 	test("when user signup", async () => {
 		const result = await signUp(mockUserData);
@@ -327,10 +328,6 @@ describe("Test for verify function", () => {
 	test("When user tried to access post url enpoint using token", async () => {
 		const resp = await loginUser(loginCredentials);
 		const authToken = resp.body.token;
-		const obj = {
-			url: "https://www.google.com",
-		};
-		console.log(mockUrl);
 		const data = await addUrl(mockUrl, authToken);
 		console.log(data.body);
 		expect(data.body).toEqual(
