@@ -2,7 +2,7 @@ require("dotenv").config();
 const request = require("supertest");
 const { app } = require("../app");
 const { beforeAll } = require("@jest/globals");
-const { connectToDb, getDb } = require("../connection");
+const { connectToDb, getDb, getClient } = require("../connection");
 const { fetchData } = require("../utils/utils");
 const { generate } = require("otp-generator");
 const md5 = require("md5");
@@ -31,45 +31,35 @@ beforeAll(async () => {
 	await connectToDb(process.env.URI);
 });
 
-describe("All tests", () => {
-	const mockUserData = {
-		name: "Sagar Mishra",
-		email: `${generate(7, {
-			upperCaseAlphabets: false,
-			specialChars: false,
-			digits: false,
-			lowerCaseAlphabets: true,
-		})}@amozix.com`,
-		password: "Sagar@123",
-	};
-	const hash = md5(mockUserData.email);
-	afterEach(async () => {
-		await getDb().collection("users").deleteOne({ email: mockUserData.email });
-		await getDb().collection("otp").deleteOne({ email: mockUserData.email });
-		await getDb().collection("urlshortner").deleteOne({ email: "https://www.google.com" });
-	});
+afterAll(async () => {
+	await getDb().collection("users").deleteMany({ email: mockUserData.email });
+	await getDb().collection("otp").deleteMany({ email: mockUserData.email });
+	await getDb().collection("urlshortner").deleteMany({ longUrl: "https://www.google.com" });
+	await getClient().close();
+});
 
-	test("When user signup and get OTP and verify it", async () => {
-		const result = await signUp(mockUserData);
-		expect(result.body).toEqual(
-			expect.objectContaining({
-				message: expect.any(String),
-			})
-		);
-		await new Promise((resolve) => setTimeout(resolve, 4000));
-		const otp = await fetchData(hash);
-		const otpObj = {
-			email: mockUserData.email,
-			otp: otp,
-		};
-		const response = await verifyUser(otpObj);
-		expect(response.body).toEqual(
-			expect.objectContaining({
-				message: expect.any(String),
-			})
-		);
-	}, 8000);
+const mockUserData = {
+	name: "Sagar Mishra",
+	email: `${generate(7, {
+		upperCaseAlphabets: false,
+		specialChars: false,
+		digits: false,
+		lowerCaseAlphabets: true,
+	})}@amozix.com`,
+	password: "Sagar@123",
+};
+const hash = md5(mockUserData.email);
 
+const mockUrl = {
+	url: "https://www.google.com",
+};
+
+const loginCredentials = {
+	email: mockUserData.email,
+	password: mockUserData.password,
+};
+
+describe("All test flow wise", () => {
 	test("When user sign up using either invalid name, email or password", async () => {
 		const user1 = {
 			name: "Sagar1 Mis4shra",
@@ -92,115 +82,10 @@ describe("All tests", () => {
 			email: "mishra@gmail.com",
 			password: "123456789",
 		};
-		const respPass = await await signUp(user3);
+		const respPass = await signUp(user3);
 		expect(respPass.statusCode).toBe(400);
 	});
-
-	test("when a user signup and verify and login and generate a token", async () => {
-		const result = await signUp(mockUserData);
-		expect(result.body).toEqual(
-			expect.objectContaining({
-				message: expect.any(String),
-			})
-		);
-		await new Promise((resolve) => setTimeout(resolve, 4000));
-		const otp = await fetchData(hash);
-		const otpObj = {
-			email: mockUserData.email,
-			otp: otp,
-		};
-		const response = await verifyUser(otpObj);
-		expect(response.body).toEqual(
-			expect.objectContaining({
-				message: expect.any(String),
-			})
-		);
-		const loginObj = {
-			email: mockUserData.email,
-			password: mockUserData.password,
-		};
-		const resp = await loginUser(loginObj);
-		expect(resp.body).toEqual(
-			expect.objectContaining({
-				message: expect.any(String),
-				token: expect.any(String),
-			})
-		);
-	}, 8000);
-
-	test("when a user signs up and verify and login and generate token and then post a url", async () => {
-		const result = await signUp(mockUserData);
-		expect(result.body).toEqual(
-			expect.objectContaining({
-				message: expect.any(String),
-			})
-		);
-		await new Promise((resolve) => setTimeout(resolve, 2000));
-		const otp = await fetchData(hash);
-		const otpObj = {
-			email: mockUserData.email,
-			otp: otp,
-		};
-		const response = await verifyUser(otpObj);
-		expect(response.body).toEqual(
-			expect.objectContaining({
-				message: expect.any(String),
-			})
-		);
-		const loginObj = {
-			email: mockUserData.email,
-			password: mockUserData.password,
-		};
-		const resp = await loginUser(loginObj);
-		expect(resp.body).toEqual(
-			expect.objectContaining({
-				message: expect.any(String),
-				token: expect.any(String),
-			})
-		);
-		const authToken = resp.body.token;
-		const obj = {
-			url: "https://www.google.com",
-		};
-		const data = await addUrl(obj, authToken);
-		expect(data.body).toEqual(
-			expect.objectContaining({
-				urlCode: expect.any(String),
-				longUrl: expect.any(String),
-				shortUrl: expect.any(String),
-			})
-		);
-	}, 6000);
-});
-
-describe("All test flow wise", () => {
-	const mockUserData = {
-		name: "Sagar Mishra",
-		email: `${generate(7, {
-			upperCaseAlphabets: false,
-			specialChars: false,
-			digits: false,
-			lowerCaseAlphabets: true,
-		})}@amozix.com`,
-		password: "Sagar@123",
-	};
-	const hash = md5(mockUserData.email);
-
-	const loginCredentials = {
-		email: mockUserData.email,
-		password: mockUserData.password,
-	};
-
-	const mockUrl = {
-		url: "https://www.google.com",
-	};
-
-	afterAll(async () => {
-		await getDb().collection("users").deleteOne({ email: mockUserData.email });
-		await getDb().collection("otp").deleteOne({ email: mockUserData.email });
-		await getDb().collection("urlshortner").deleteOne({ longUrl: "hhtps://www.google.com" });
-	});
-	test("when user signup", async () => {
+	test("when user signup correctly", async () => {
 		const result = await signUp(mockUserData);
 		expect(result.body).toEqual(
 			expect.objectContaining({
@@ -329,7 +214,6 @@ describe("All test flow wise", () => {
 		const resp = await loginUser(loginCredentials);
 		const authToken = resp.body.token;
 		const data = await addUrl(mockUrl, authToken);
-		console.log(data.body);
 		expect(data.body).toEqual(
 			expect.objectContaining({
 				urlCode: expect.any(String),
