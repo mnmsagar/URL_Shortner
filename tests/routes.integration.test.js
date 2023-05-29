@@ -1,7 +1,7 @@
 require("dotenv").config();
 const request = require("supertest");
 const { app } = require("../app");
-const { beforeAll } = require("@jest/globals");
+const { beforeAll, expect, afterAll } = require("@jest/globals");
 const { connectToDb, getDb, getClient } = require("../connection");
 const { fetchData } = require("../utils/utils");
 const { generate } = require("otp-generator");
@@ -27,14 +27,15 @@ const getObjById = async (id) => {
 	return request(app).get(`/${id}`);
 };
 
+const resendOtp = async (obj) => {
+	return await request(app).post("/users/resendotp").send(obj);
+};
+
 beforeAll(async () => {
 	await connectToDb(process.env.URI);
 });
 
 afterAll(async () => {
-	await getDb().collection("users").deleteMany({ email: mockUserData.email });
-	await getDb().collection("otp").deleteMany({ email: mockUserData.email });
-	await getDb().collection("urlshortner").deleteMany({ longUrl: "https://www.google.com" });
 	await getClient().close();
 });
 
@@ -60,6 +61,11 @@ const loginCredentials = {
 };
 
 describe("All test flow wise", () => {
+	afterAll(async () => {
+		await getDb().collection("users").deleteMany({ email: mockUserData.email });
+		await getDb().collection("otp").deleteMany({ email: mockUserData.email });
+		await getDb().collection("urlshortner").deleteMany({ longUrl: "https://www.google.com" });
+	});
 	test("When user sign up using either invalid name, email or password", async () => {
 		const user1 = {
 			name: "Sagar1 Mis4shra",
@@ -85,13 +91,14 @@ describe("All test flow wise", () => {
 		const respPass = await signUp(user3);
 		expect(respPass.statusCode).toBe(400);
 	});
-	test("when user signup correctly", async () => {
+	test("when user signup correctly using valid name, email and passsord", async () => {
 		const result = await signUp(mockUserData);
 		expect(result.body).toEqual(
 			expect.objectContaining({
 				message: expect.any(String),
 			})
 		);
+		expect(result.statusCode).toBe(201);
 	});
 
 	test("when user try to verify with invalid otp or invalid email id or both", async () => {
@@ -110,6 +117,7 @@ describe("All test flow wise", () => {
 				message: expect.any(String),
 			})
 		);
+		expect(verifiedObj.statusCode).toBe(400);
 	});
 
 	test("when user try to verify with empty body", async () => {
@@ -120,6 +128,7 @@ describe("All test flow wise", () => {
 				message: expect.any(String),
 			})
 		);
+		expect(verifiedObj.statusCode).toBe(400);
 	});
 
 	test("when user try to verify before signup", async () => {
@@ -133,6 +142,7 @@ describe("All test flow wise", () => {
 				message: expect.any(String),
 			})
 		);
+		expect(verifiedObj.statusCode).toBe(400);
 	});
 
 	test("when user uses correct email and otp for verification", async () => {
@@ -148,17 +158,26 @@ describe("All test flow wise", () => {
 				message: expect.any(String),
 			})
 		);
+		expect(verifiedObj.statusCode).toBe(201);
 	}, 6000);
 
-	test("when already verified user tries to signup or verify", async () => {
+	test("when already verified user tries to signup", async () => {
 		const result = await signUp(mockUserData);
 		expect(result.body).toEqual(
 			expect.objectContaining({
 				message: expect.any(String),
 			})
 		);
-		await new Promise((resolve) => setTimeout(resolve, 2000));
-		const otp = await fetchData(hash);
+		expect(result.statusCode).toBe(409);
+	});
+
+	test("when already verified user tries to verify with correct/incorrect otp ", async () => {
+		const otp = generate(6, {
+			upperCaseAlphabets: false,
+			specialChars: false,
+			digits: true,
+			lowerCaseAlphabets: false,
+		});
 		const obj = {
 			email: mockUserData.email,
 			otp: otp,
@@ -169,7 +188,8 @@ describe("All test flow wise", () => {
 				message: expect.any(String),
 			})
 		);
-	}, 6000);
+		expect(verifiedObj.statusCode).toBe(409);
+	});
 
 	test("when user try to login with correct credentials", async () => {
 		const resp = await loginUser(loginCredentials);
@@ -179,6 +199,7 @@ describe("All test flow wise", () => {
 				token: expect.any(String),
 			})
 		);
+		expect(resp.statusCode).toBe(200);
 	});
 	test("when user try to login with incorrect credentials", async () => {
 		const loginCredentials = {
@@ -228,7 +249,7 @@ describe("All test flow wise", () => {
 		const authToken = resp.body.token;
 		const data = await addUrl(mockUrl, authToken);
 		const id = data.body.urlCode;
-		const get = await request(app).get(`/${id}`);
+		const get = await getObjById(id);
 		expect(get.statusCode).toBe(301);
 	});
 
@@ -300,4 +321,55 @@ describe("All test flow wise", () => {
 		const data = await getObjById(id);
 		expect(data.statusCode).toBe(404);
 	});
+});
+
+describe("Group B", () => {
+	test("when user signs up but verified lately, till otp expired", async () => {
+		console.log("Hello");
+		const result = await signUp(mockUserData);
+		expect(result.body).toEqual(
+			expect.objectContaining({
+				message: expect.any(String),
+			})
+		);
+		console.log(result.body);
+		await new Promise((resolve) => setTimeout(resolve, 4000));
+		const otp = await fetchData(hash);
+		const otpObj = {
+			email: mockUserData.email,
+			otp: otp,
+		};
+		console.log(otp);
+		await new Promise((resolve) => setTimeout(resolve, 60000));
+		const response = await verifyUser(otpObj);
+		expect(response.body).toEqual(
+			expect.objectContaining({
+				message: expect.any(String),
+			})
+		);
+		console.log(response.body);
+	}, 120000);
+
+	test("when user signups but due to email sending error, didn't receive otp, so resends otp and then verify", async () => {
+		const obj = {
+			email: mockUserData.email,
+		};
+		const resOtp = await resendOtp(obj);
+		console.log(resOtp.body);
+		expect(resOtp.statusCode).toBe(201);
+		await new Promise((resolve) => setTimeout(resolve, 4000));
+		const otp = await fetchData(hash);
+		const otpObj = {
+			email: mockUserData.email,
+			otp: otp,
+		};
+		console.log(otp);
+		const response = await verifyUser(otpObj);
+		expect(response.body).toEqual(
+			expect.objectContaining({
+				message: expect.any(String),
+			})
+		);
+		console.log(response.body);
+	}, 10000);
 });
