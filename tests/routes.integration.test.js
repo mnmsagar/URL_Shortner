@@ -60,7 +60,7 @@ const loginCredentials = {
 	password: mockUserData.password,
 };
 
-describe("All test flow wise", () => {
+describe("All test cases in which user sign up , verify otp and login and use shorten endpoint to generate shortUrl and then get shortUrl", () => {
 	afterAll(async () => {
 		await getDb().collection("users").deleteMany({ email: mockUserData.email });
 		await getDb().collection("otp").deleteMany({ email: mockUserData.email });
@@ -323,47 +323,25 @@ describe("All test flow wise", () => {
 	});
 });
 
-describe("Group B", () => {
-	test("when user signs up but verified lately, till otp expired", async () => {
-		console.log("Hello");
+describe("resendOtp when OTP gets expired!", () => {
+	afterAll(async () => {
+		await getDb().collection("users").deleteMany({ email: mockUserData.email });
+		await getDb().collection("otp").deleteMany({ email: mockUserData.email });
+	});
+	test("when user signs up but verified lately, till otp expired ", async () => {
 		const result = await signUp(mockUserData);
 		expect(result.body).toEqual(
 			expect.objectContaining({
 				message: expect.any(String),
 			})
 		);
-		console.log(result.body);
 		await new Promise((resolve) => setTimeout(resolve, 4000));
 		const otp = await fetchData(hash);
 		const otpObj = {
 			email: mockUserData.email,
 			otp: otp,
 		};
-		console.log(otp);
-		await new Promise((resolve) => setTimeout(resolve, 60000));
-		const response = await verifyUser(otpObj);
-		expect(response.body).toEqual(
-			expect.objectContaining({
-				message: expect.any(String),
-			})
-		);
-		console.log(response.body);
-	}, 120000);
-
-	test("when user signups but due to email sending error, didn't receive otp, so resends otp and then verify", async () => {
-		const obj = {
-			email: mockUserData.email,
-		};
-		const resOtp = await resendOtp(obj);
-		console.log(resOtp.body);
-		expect(resOtp.statusCode).toBe(201);
-		await new Promise((resolve) => setTimeout(resolve, 4000));
-		const otp = await fetchData(hash);
-		const otpObj = {
-			email: mockUserData.email,
-			otp: otp,
-		};
-		console.log(otp);
+		await getDb().collection("otp").deleteOne({ email: mockUserData.email });
 		const response = await verifyUser(otpObj);
 		expect(response.body).toEqual(
 			expect.objectContaining({
@@ -372,4 +350,50 @@ describe("Group B", () => {
 		);
 		console.log(response.body);
 	}, 10000);
+
+	test("due to otp expiration, user will resend the otp and use this to get verified", async () => {
+		const obj = {
+			email: mockUserData.email,
+		};
+		const resOtp = await resendOtp(obj);
+		expect(resOtp.statusCode).toBe(201);
+		await new Promise((resolve) => setTimeout(resolve, 4000));
+		const otp = await fetchData(hash);
+		const otpObj = {
+			email: mockUserData.email,
+			otp: otp,
+		};
+		const response = await verifyUser(otpObj);
+		expect(response.body).toEqual(
+			expect.objectContaining({
+				message: expect.any(String),
+			})
+		);
+	}, 10000);
+});
+
+describe("resendOtp when due to error, user is not able to receive otp on mail", () => {
+	afterAll(async () => {
+		await getDb().collection("users").deleteMany({ email: mockUserData.email });
+		await getDb().collection("otp").deleteMany({ email: mockUserData.email });
+	});
+	test("user will signup and send otp to get verified but due to error, email not delivered, then it will resend the otp to get verified", async () => {
+		const response = await signUp(mockUserData);
+		expect(response.statusCode).toBe(201);
+		const resendOTP = await resendOtp({ email: mockUserData.email });
+		expect(resendOTP.statusCode).toBe(201);
+		await new Promise((resolve) => setTimeout(resolve, 10000));
+		const otp = await fetchData(hash);
+		const otpObj = {
+			email: mockUserData.email,
+			otp: otp,
+		};
+		const verification = await verifyUser(otpObj);
+		expect(verification.body).toEqual(
+			expect.objectContaining({
+				message: expect.any(String),
+			})
+		);
+		expect(verification.statusCode).toBe(201);
+	}, 18000);
 });
