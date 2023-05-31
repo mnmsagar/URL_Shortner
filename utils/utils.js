@@ -1,3 +1,4 @@
+require("dontenv").config();
 const { validate } = require("email-validator");
 const passwordValidator = require("password-validator");
 const { createHmac } = require("crypto");
@@ -5,7 +6,7 @@ const { sign } = require("jsonwebtoken");
 const { generate } = require("otp-generator");
 
 const myHeaders = new Headers();
-myHeaders.append("apikey", "nMO6iHmcwxvPl4MiDtjKbDuvKFJhFPC3");
+myHeaders.append("apikey", process.env.TEMP_MAIL_KEY);
 
 const isValidString = (str) => {
 	if (str.trim().length === 0) {
