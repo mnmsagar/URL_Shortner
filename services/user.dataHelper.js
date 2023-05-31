@@ -152,10 +152,17 @@ const resetPass = async (body) => {
 		return badRequest("Either invalid otp or user not registered!!");
 	}
 	const hashedPassword = hashPassword(newPassword);
-	await getDb()
+	const updatedObj = await getDb()
 		.collection("users")
 		.updateOne({ email: otpUser.email, isRegistered: true }, { $set: { password: hashedPassword } });
-	await getDb().collection("otp").deleteOne({ email: otpUser.email });
+	if (!updatedObj.modifiedCount || !updatedObj.matchedCount) {
+		throw new Error("Updation failed in resetPass helper");
+	}
+	const deletedObj = await getDb().collection("otp").deleteOne({ email: otpUser.email });
+	if (!deletedObj.deletedCount || !deletedObj.acknowledged) {
+		throw new Error("deletion failed in resetPass helper");
+	}
+
 	return badRequest("password succesfully updated!!");
 };
 
