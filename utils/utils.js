@@ -1,4 +1,4 @@
-require("dontenv").config();
+require("dotenv").config();
 const { validate } = require("email-validator");
 const passwordValidator = require("password-validator");
 const { createHmac } = require("crypto");
