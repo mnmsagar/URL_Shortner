@@ -18,7 +18,7 @@ router.route("/verify-email").post(verifyMail);
 router.route("/resendotp").post(resendOtp);
 router.route("/forget-password").post(forgetPassword);
 router.route("/confirm-forget-password").post(confmForgetPass);
-router.route("/passwordUpdate").post(checkUserAuth, updatePassword);
+router.route("/password-update").post(checkUserAuth, updatePassword);
 
 module.exports = {
 	router,
