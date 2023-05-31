@@ -6,6 +6,9 @@ const {
 	verifyUser,
 	resendOtp,
 	existingUser,
+	forgetPass,
+	resetPass,
+	updatePass,
 } = require("../services/user.dataHelper");
 const { isValidEmail, tokenGeneration } = require("../utils/utils");
 
@@ -92,6 +95,48 @@ exports.resendOtp = async (req, res) => {
 		}
 		const resendObj = await resendOtp(req.body);
 		res.status(resendObj.statusCode).json(resendObj.message);
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({
+			message: "something went wrong",
+		});
+	}
+};
+
+exports.forgetPassword = async (req, res) => {
+	try {
+		const { email } = req.body;
+		if (!email) {
+			res.status(400).json({
+				message: "invalid body, please use email",
+			});
+		}
+		const obj = await forgetPass(email);
+		res.status(obj.statusCode).json(obj.message);
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({
+			message: "something went wrong",
+		});
+	}
+};
+
+exports.confmForgetPass = async (req, res) => {
+	try {
+		const obj = await resetPass(req.body);
+		res.status(obj.statusCode).json(obj.message);
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({
+			message: "something went wrong",
+		});
+	}
+};
+
+exports.updatePassword = async (req, res) => {
+	try {
+		const obj = await updatePass(req.body);
+		res.status(obj.statusCode).json(obj.message);
 	} catch (error) {
 		console.error(error);
 		res.status(500).json({

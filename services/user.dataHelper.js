@@ -120,6 +120,54 @@ const resendOtp = async (body) => {
 	return createdResp("OTP resend successfully");
 };
 
+const forgetPass = async (email) => {
+	if (!isValidEmail(email)) {
+		return badRequest("invalid email !!");
+	}
+	const user = await getDb().collection("users").findOne({ email: email, isRegistered: true });
+	if (!user) {
+		return badRequest("User not registered !!");
+	}
+	const otp = otpGenerator();
+	const otpObj = {
+		email: email,
+		otp: otp,
+		expiresAt: Date.now(),
+	};
+	const insertedObj = await getDb().collection("otp").insertOne(otpObj);
+	if (!insertedObj.acknowledged) {
+		throw new Error("Error in insertion in otpObj in fortget password !!");
+	}
+	await sendVerificationMail(user.email, otp, user.name);
+	return createdResp("OTP Successfully sent to your email");
+};
+
+const resetPass = async (body) => {
+	const { email, otp, newPassword } = body;
+	if (!email || !otp || !newPassword) {
+		return badRequest("invalid body");
+	}
+	const otpUser = await getDb().collection("otp").findOne({ email: email, otp: otp });
+	if (!otpUser) {
+		return badRequest("Either invalid otp or user not registered!!");
+	}
+	const hashedPassword = hashPassword(newPassword);
+	await getDb()
+		.collection("users")
+		.updateOne({ email: otpUser.email, isRegistered: true }, { $set: { password: hashedPassword } });
+	await getDb().collection("otp").deleteOne({ email: otpUser.email });
+	return badRequest("password succesfully updated!!");
+};
+
+const updatePass = async (body) => {
+	const { email, newPassword } = body;
+	const hashedPassword = hashPassword(newPassword);
+	await getDb()
+		.collection("users")
+		.updateOne({ email: email, isRegistered: true }, { $set: { password: hashedPassword } });
+	return createdResp("password updated successfully!!");
+};
+
 module.exports = {
 	existingUser,
 	checkBody,
@@ -127,4 +175,7 @@ module.exports = {
 	userMail,
 	verifyUser,
 	resendOtp,
+	forgetPass,
+	resetPass,
+	updatePass,
 };
