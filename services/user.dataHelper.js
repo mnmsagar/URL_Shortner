@@ -2,7 +2,7 @@ require("dotenv").config();
 const { getDb } = require("../connection");
 const { isValidPassword, isValidString, isValidEmail, hashPassword, otpGenerator } = require("../utils/utils");
 const { badRequest, createdResp } = require("../utils/utils");
-const { sendVerificationMail } = require("../utils/email");
+const { sendEmail } = require("../utils/email");
 
 const existingUser = async (email) => {
 	const obj = await getDb().collection("users").findOne({ email: email });
@@ -65,7 +65,21 @@ const userMail = async (body) => {
 	if (!otpInsert.acknowledged) {
 		throw Error("OTP Insertion Error in userMail!!");
 	}
-	await sendVerificationMail(email, otp, name);
+	let mailOptions = {
+		from: "testoscompany@gmail.com",
+		to: email,
+		subject: "OTP Verification for Account Activation",
+		html: `<div class="container">
+					<p>Dear ${name},</p>
+					<p>Please use the following OTP to verify your account:</p>
+					<h2 style="background-color: #f5f5f5; padding: 10px; font-weight: bold; font-size: 24px;">${otp}</h2>
+					<p>Note: This OTP is valid for a limited time and for a single use only.</p>
+					<p>If you didn't request this verification, you can safely ignore this email.</p>
+					<p>Best regards,</p>
+					<p>Your Company</p>
+				</div>`,
+	};
+	await sendEmail(mailOptions);
 	return createdResp("A OTP has been sent to you via your mail address, Please enter the OTP to get authenticated.");
 };
 
@@ -116,7 +130,21 @@ const resendOtp = async (body) => {
 	if ((!updatedOtp.matchedCount || !updatedOtp.modifiedCount) && !updatedOtp.upsertedCount) {
 		throw new Error("OTP updation error in resendOtp");
 	}
-	await sendVerificationMail(email, otp, user.name);
+	let mailOptions = {
+		from: "testoscompany@gmail.com",
+		to: email,
+		subject: "New OTP for Verification",
+		html: `<div class="container">
+					<p>Dear ${user.name},</p>
+					<p>We noticed that you requested a new OTP to verify your account.</p>
+					<h2 style="background-color: #f5f5f5; padding: 10px; font-weight: bold; font-size: 24px;">${otp}</h2>
+					<p>Note: This OTP is valid for a limited time and for a single use only.</p>
+					<p>If you didn't request this, you can safely ignore this email.</p>
+					<p>Best regards,</p>
+					<p>Your Company</p>
+				</div>`,
+	};
+	await sendEmail(mailOptions);
 	return createdResp("OTP resend successfully");
 };
 
@@ -129,16 +157,29 @@ const forgetPass = async (email) => {
 		return badRequest("User not registered !!");
 	}
 	const otp = otpGenerator();
-	const otpObj = {
-		email: email,
-		otp: otp,
-		expiresAt: Date.now(),
-	};
-	const insertedObj = await getDb().collection("otp").insertOne(otpObj);
-	if (!insertedObj.acknowledged) {
-		throw new Error("Error in insertion in otpObj in fortget password !!");
+	const updatedOtp = await getDb()
+		.collection("otp")
+		.updateOne({ email: email }, { $set: { otp: otp, expiresAt: Date.now() } }, { upsert: true });
+	console.log(updatedOtp);
+	if ((!updatedOtp.matchedCount || !updatedOtp.modifiedCount) && !updatedOtp.upsertedCount) {
+		throw new Error("Error in updation/upsert in forget password !!");
 	}
-	await sendVerificationMail(user.email, otp, user.name);
+	let mailOptions = {
+		from: "testoscompany@gmail.com",
+		to: email,
+		subject: "OTP for Account's Password Reset",
+		html: `<div class="container">
+					<p>Dear ${user.name},</p>
+					<p>We received a request to reset your password for your account.</p>
+					<p>Please use the following OTP to reset your account:</p>
+					<h2 style="background-color: #f5f5f5; padding: 10px; font-weight: bold; font-size: 24px;">${otp}</h2>
+					<p>Note: This OTP is valid for a limited time and for a single use only.</p>
+					<p>If you didn't request this, you can safely ignore this email.</p>
+					<p>Best regards,</p>
+					<p>Your Company</p>
+				</div>`,
+	};
+	await sendEmail(mailOptions);
 	return createdResp("OTP Successfully sent to your email");
 };
 
@@ -162,17 +203,28 @@ const resetPass = async (body) => {
 	if (!deletedObj.deletedCount || !deletedObj.acknowledged) {
 		throw new Error("deletion failed in resetPass helper");
 	}
-
 	return badRequest("password succesfully updated!!");
 };
 
-const updatePass = async (body) => {
-	const { email, newPassword } = body;
-	const hashedPassword = hashPassword(newPassword);
-	await getDb()
+const updatePass = async (email, oldPassword, newPassword) => {
+	const user = await getDb().collection("users").findOne({ email: email });
+	const hashedOldPassword = hashPassword(oldPassword);
+	if (user.password !== hashedOldPassword) {
+		return badRequest("old password is incorrect");
+	}
+	if (!isValidPassword(newPassword)) {
+		return badRequest(
+			"Invalid password, Password should contain : min length of 8 characters, max of 100 characters, Must have uppercase letters, must have lowercase letters, must have at least 2 digits, should not have any spaces"
+		);
+	}
+	const hashedNewPassword = hashPassword(newPassword);
+	const updatedObj = await getDb()
 		.collection("users")
-		.updateOne({ email: email, isRegistered: true }, { $set: { password: hashedPassword } });
-	return createdResp("password updated successfully!!");
+		.updateOne({ email: email }, { $set: { password: hashedNewPassword } });
+	if (!updatedObj.modifiedCount || !updatedObj.matchedCount) {
+		throw new Error("updation failed in updatePass helper!!");
+	}
+	return createdResp("Password Successfully changed");
 };
 
 module.exports = {
