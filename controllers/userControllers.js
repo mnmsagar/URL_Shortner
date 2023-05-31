@@ -135,7 +135,9 @@ exports.confmForgetPass = async (req, res) => {
 
 exports.updatePassword = async (req, res) => {
 	try {
-		const obj = await updatePass(req.body);
+		const { email } = req.user;
+		const { oldPassword, newPassword } = req.body;
+		const obj = await updatePass(email, oldPassword, newPassword);
 		res.status(obj.statusCode).json(obj.message);
 	} catch (error) {
 		console.error(error);
