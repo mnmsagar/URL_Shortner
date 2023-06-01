@@ -32,10 +32,18 @@ const userAndPasswordCheck = async (email, password) => {
 	password = hashPassword(password);
 	const result = await getDb()
 		.collection("users")
-		.findOne({ email: email, password: password, isRegistered: true }, { projection: { _id: 1, email: 1 } });
+		.findOne(
+			{ email: email, password: password, isRegistered: true },
+			{ projection: { _id: 1, email: 1, isLoginEnabled: 1 } }
+		);
 	if (!result) {
 		return {
 			message: "Invalid Credentials",
+		};
+	}
+	if (!result.isLoginEnabled) {
+		return {
+			message: "User is disabled for login, Pls contact admin!!",
 		};
 	}
 	return result;
@@ -50,7 +58,9 @@ const userMail = async (body) => {
 		email,
 		password: hashedPassword,
 		isRegistered: false,
+		isLoginEnabled: true,
 		expiresAt: new Date(),
+		isAdmin: false,
 	};
 	const userInsert = await getDb().collection("users").insertOne(user);
 	if (!userInsert.acknowledged) {
