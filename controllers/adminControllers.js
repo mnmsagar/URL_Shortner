@@ -1,4 +1,4 @@
-const { deleteUserHelper, disableLoginHelper } = require("../services/admin.dataHelper");
+const { deleteUserHelper, disableLoginHelper, enableLoginHelper } = require("../services/admin.dataHelper");
 
 const disableLogin = async (req, res) => {
 	try {
@@ -17,8 +17,21 @@ const deleteUser = async (req, res) => {
 		const obj = await deleteUserHelper(req.body);
 		res.status(obj.statusCode).json(obj.message);
 	} catch (error) {
+		console.error(error);
 		res.status(500).json({
 			message: "something went wrong!!",
+		});
+	}
+};
+
+const enableLogin = async (req, res) => {
+	try {
+		const obj = await enableLoginHelper(req.body);
+		res.status(obj.statusCode).json(obj.message);
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({
+			message: "something went wrong",
 		});
 	}
 };
@@ -26,4 +39,5 @@ const deleteUser = async (req, res) => {
 module.exports = {
 	disableLogin,
 	deleteUser,
+	enableLogin,
 };
