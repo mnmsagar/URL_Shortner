@@ -5,10 +5,10 @@ const {
 	userMail,
 	verifyUser,
 	resendOtp,
-	existingUser,
 	forgetPass,
 	resetPass,
 	updatePass,
+	findUser,
 } = require("../services/user.dataHelper");
 const { isValidEmail, tokenGeneration } = require("../utils/utils");
 
@@ -46,7 +46,7 @@ exports.signUp = async (req, res) => {
 			return;
 		}
 
-		const existUser = await existingUser(email);
+		const existUser = await findUser({ email });
 		if (existUser) {
 			res.status(409).json({
 				message: "User already Exists",
