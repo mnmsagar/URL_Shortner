@@ -39,13 +39,7 @@ exports.userlogin = async (req, res) => {
 
 exports.signUp = async (req, res) => {
 	try {
-		const { email, password, name, isAdmin } = req.body;
-		if (!email || !password || !name || isAdmin) {
-			res.status(400).json({
-				status: "failed",
-				message: "Invalid body!",
-			});
-		}
+		const { email } = req.body;
 		const result = checkBody(req.body);
 		if (result.message) {
 			res.status(result.statusCode).json(result.message);
