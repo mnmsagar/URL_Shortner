@@ -39,7 +39,13 @@ exports.userlogin = async (req, res) => {
 
 exports.signUp = async (req, res) => {
 	try {
-		const { email } = req.body;
+		const { email, password, name, isAdmin } = req.body;
+		if (!email || !password || !name || isAdmin) {
+			res.status(400).json({
+				status: "failed",
+				message: "Invalid body!",
+			});
+		}
 		const result = checkBody(req.body);
 		if (result.message) {
 			res.status(result.statusCode).json(result.message);
@@ -108,7 +114,7 @@ exports.forgetPassword = async (req, res) => {
 		const { email } = req.body;
 		if (!email) {
 			res.status(400).json({
-				message: "invalid body, please use email",
+				message: "invalid body, email is missing!!",
 			});
 		}
 		const obj = await forgetPass(email);
