@@ -1,18 +1,21 @@
 const { getDb } = require("../connection");
 const { isValidEmail, badRequest, createdResp } = require("../utils/utils");
+const { deleteUser, findUser, updateUser } = require("./user.dataHelper");
+
+const loginUpdate = async (email, bool) => {
+	return await updateUser({ email }, { $set: { isLoginEnabled: `${bool}` } });
+};
 
 const disableLoginHelper = async (body) => {
 	const { email } = body;
 	if (!isValidEmail(email)) {
 		return badRequest("Invalid email type!!");
 	}
-	const user = await getDb().collection("users").findOne({ email: email, isAdmin: false, isLoginEnabled: true });
+	const user = await findUser({ email: email, isAdmin: false, isLoginEnabled: true });
 	if (!user) {
 		return badRequest("Either user not registered or No enabled login users found !!");
 	}
-	const updatedObj = await getDb()
-		.collection("users")
-		.updateOne({ email }, { $set: { isLoginEnabled: false } });
+	const updatedObj = await loginUpdate(email, false);
 	if (!updatedObj.modifiedCount || !updatedObj.matchedCount) {
 		throw new Error("Error in updation in disableLoginHelper");
 	}
@@ -24,12 +27,11 @@ const deleteUserHelper = async (body) => {
 	if (!isValidEmail(email)) {
 		return badRequest("Invalid email type!!");
 	}
-	const user = await getDb().collection("users").findOne({ email: email, isAdmin: false });
+	const user = await findUser({ email: email, isAdmin: false });
 	if (!user) {
 		return badRequest("user not exist!!");
 	}
-	const deletedUser = await getDb().collection("users").deleteOne({ email });
-	console.log(deletedUser);
+	const deletedUser = await deleteUser({ email });
 	if (!deletedUser.deletedCount || !deletedUser.acknowledged) {
 		throw new Error("Error in deletion of User in deleteUserHelper");
 	}
@@ -45,13 +47,11 @@ const enableLoginHelper = async (body) => {
 	if (!isValidEmail(email)) {
 		return badRequest("Invalid email type!!");
 	}
-	const user = await getDb().collection("users").findOne({ email: email, isAdmin: false, isLoginEnabled: false });
+	const user = await findUser({ email: email, isAdmin: false, isLoginEnabled: false });
 	if (!user) {
 		return badRequest("Either user not registered or No disabled login users found !!");
 	}
-	const updatedUser = await getDb()
-		.collection("users")
-		.updateOne({ email: email }, { $set: { isLoginEnabled: true } });
+	const updatedUser = await loginUpdate(email, true);
 	if (!updatedUser.modifiedCount || !updatedUser.matchedCount) {
 		throw new Error("Error in user updation in enableLoginHelper");
 	}
