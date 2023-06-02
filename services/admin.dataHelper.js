@@ -1,17 +1,14 @@
 const { getDb } = require("../connection");
-const { isValidEmail, badRequest, createdResp } = require("../utils/utils");
+const { badRequest, createdResp } = require("../utils/utils");
 const { deleteUser, findUser, updateUser } = require("./user.dataHelper");
 
 const loginUpdate = async (email, bool) => {
-	return await updateUser({ email }, { $set: { isLoginEnabled: `${bool}` } });
+	return await updateUser([{ email }, { $set: { isLoginEnabled: bool } }]);
 };
 
 const disableLoginHelper = async (body) => {
 	const { email } = body;
-	if (!isValidEmail(email)) {
-		return badRequest("Invalid email type!!");
-	}
-	const user = await findUser({ email: email, isAdmin: false, isLoginEnabled: true });
+	const user = await findUser([{ email: email, isAdmin: false, isLoginEnabled: true }]);
 	if (!user) {
 		return badRequest("Either user not registered or No enabled login users found !!");
 	}
@@ -24,10 +21,7 @@ const disableLoginHelper = async (body) => {
 
 const deleteUserHelper = async (body) => {
 	const { email } = body;
-	if (!isValidEmail(email)) {
-		return badRequest("Invalid email type!!");
-	}
-	const user = await findUser({ email: email, isAdmin: false });
+	const user = await findUser([{ email: email, isAdmin: false }]);
 	if (!user) {
 		return badRequest("user not exist!!");
 	}
@@ -44,10 +38,7 @@ const deleteUserHelper = async (body) => {
 
 const enableLoginHelper = async (body) => {
 	const { email } = body;
-	if (!isValidEmail(email)) {
-		return badRequest("Invalid email type!!");
-	}
-	const user = await findUser({ email: email, isAdmin: false, isLoginEnabled: false });
+	const user = await findUser([{ email: email, isAdmin: false, isLoginEnabled: false }]);
 	if (!user) {
 		return badRequest("Either user not registered or No disabled login users found !!");
 	}
@@ -55,7 +46,7 @@ const enableLoginHelper = async (body) => {
 	if (!updatedUser.modifiedCount || !updatedUser.matchedCount) {
 		throw new Error("Error in user updation in enableLoginHelper");
 	}
-	createdResp("User login enabled successfully!!");
+	return createdResp("User login enabled successfully!!");
 };
 
 module.exports = {
