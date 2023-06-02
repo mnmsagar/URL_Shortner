@@ -2,7 +2,7 @@ require("dotenv").config();
 const { getDb } = require("../connection");
 const { isValidPassword, isValidString, isValidEmail, hashPassword, otpGenerator } = require("../utils/utils");
 const { badRequest, createdResp } = require("../utils/utils");
-const { sendEmail } = require("../utils/email");
+const { sendForgetPasswordEmail, sendResendOtpMail, sendVerificationEmail } = require("../utils/email");
 
 const findUser = async (arr) => {
 	return await getDb().collection("users").findOne(arr[0], arr[1]);
@@ -15,6 +15,22 @@ const deleteUser = async (obj) => {
 };
 const updateUser = async (arr) => {
 	return await getDb().collection("users").updateOne(arr[0], arr[1], arr[2]);
+};
+
+const findOtp = async (obj) => {
+	return await getDb().collection("otp").findOne(obj);
+};
+
+const insertOtp = async (obj) => {
+	return await getDb().collection("otp").insertOne(obj);
+};
+
+const deleteOtp = async (obj) => {
+	return await getDb().collection("otp").deleteOne(obj);
+};
+
+const updateOtp = async (arr) => {
+	return await getDb().collection("otp").updateOne(arr[0], arr[1], arr[2]);
 };
 
 const checkBody = (body) => {
@@ -77,25 +93,11 @@ const userMail = async (body) => {
 		email,
 		expiresAt: new Date(),
 	};
-	const otpInsert = await getDb().collection("otp").insertOne(otpData);
+	const otpInsert = await insertOtp(otpData);
 	if (!otpInsert.acknowledged) {
 		throw Error("OTP Insertion Error in userMail!!");
 	}
-	let mailOptions = {
-		from: "testoscompany@gmail.com",
-		to: email,
-		subject: "OTP Verification for Account Activation",
-		html: `<div class="container">
-					<p>Dear ${name},</p>
-					<p>Please use the following OTP to verify your account:</p>
-					<h2 style="background-color: #f5f5f5; padding: 10px; font-weight: bold; font-size: 24px;">${otp}</h2>
-					<p>Note: This OTP is valid for a limited time and for a single use only.</p>
-					<p>If you didn't request this verification, you can safely ignore this email.</p>
-					<p>Best regards,</p>
-					<p>Your Company</p>
-				</div>`,
-	};
-	await sendEmail(mailOptions);
+	await sendVerificationEmail(name, email, otp);
 	return createdResp("A OTP has been sent to you via your mail address, Please enter the OTP to get authenticated.");
 };
 
@@ -113,7 +115,7 @@ const verifyUser = async (body) => {
 	if (userExisting.isRegistered) {
 		return { statusCode: 409, message: "Already Registered" };
 	}
-	const userOtp = await getDb().collection("otp").findOne({ email, otp });
+	const userOtp = await findOtp({ email, otp });
 	if (!userOtp) {
 		return badRequest("Either email or OTP are incorrect or OTP expired!!, Please Check");
 	}
@@ -121,7 +123,7 @@ const verifyUser = async (body) => {
 	if (!updatedObj.matchedCount || !updatedObj.modifiedCount) {
 		throw new Error("Updation Error in verifyUser");
 	}
-	const deletedOTP = await getDb().collection("otp").deleteOne({ email });
+	const deletedOTP = await deleteOtp({ email });
 	if (!deletedOTP.deletedCount || !deletedOTP.acknowledged) {
 		throw Error("Deletion Error in verifyUser!!");
 	}
@@ -138,27 +140,15 @@ const resendOtp = async (body) => {
 	if (user.isRegistered) {
 		return badRequest("User already registerted");
 	}
-	const updatedOtp = await getDb()
-		.collection("otp")
-		.updateOne({ email: email }, { $set: { otp: otp, expiresAt: new Date() } }, { upsert: true });
+	const updatedOtp = await updateOtp([
+		{ email: email },
+		{ $set: { otp: otp, expiresAt: Date.now(), isResendOtp: true } },
+		{ upsert: true },
+	]);
 	if ((!updatedOtp.matchedCount || !updatedOtp.modifiedCount) && !updatedOtp.upsertedCount) {
 		throw new Error("OTP updation error in resendOtp");
 	}
-	let mailOptions = {
-		from: "testoscompany@gmail.com",
-		to: email,
-		subject: "New OTP for Verification",
-		html: `<div class="container">
-					<p>Dear ${user.name},</p>
-					<p>We noticed that you requested a new OTP to verify your account.</p>
-					<h2 style="background-color: #f5f5f5; padding: 10px; font-weight: bold; font-size: 24px;">${otp}</h2>
-					<p>Note: This OTP is valid for a limited time and for a single use only.</p>
-					<p>If you didn't request this, you can safely ignore this email.</p>
-					<p>Best regards,</p>
-					<p>Your Company</p>
-				</div>`,
-	};
-	await sendEmail(mailOptions);
+	await sendResendOtpMail(user.name, email, otp);
 	return createdResp("OTP resend successfully");
 };
 
@@ -171,28 +161,15 @@ const forgetPass = async (email) => {
 		return badRequest("User not registered !!");
 	}
 	const otp = otpGenerator();
-	const updatedOtp = await getDb()
-		.collection("otp")
-		.updateOne({ email: email }, { $set: { otp: otp, expiresAt: Date.now() } }, { upsert: true });
+	const updatedOtp = await updateOtp([
+		{ email: email },
+		{ $set: { otp: otp, expiresAt: Date.now(), isforgetPassOtp: true } },
+		{ upsert: true },
+	]);
 	if ((!updatedOtp.matchedCount || !updatedOtp.modifiedCount) && !updatedOtp.upsertedCount) {
 		throw new Error("Error in updation/upsert in forget password !!");
 	}
-	let mailOptions = {
-		from: "testoscompany@gmail.com",
-		to: email,
-		subject: "OTP for Account's Password Reset",
-		html: `<div class="container">
-					<p>Dear ${user.name},</p>
-					<p>We received a request to reset your password for your account.</p>
-					<p>Please use the following OTP to reset your account:</p>
-					<h2 style="background-color: #f5f5f5; padding: 10px; font-weight: bold; font-size: 24px;">${otp}</h2>
-					<p>Note: This OTP is valid for a limited time and for a single use only.</p>
-					<p>If you didn't request this, you can safely ignore this email.</p>
-					<p>Best regards,</p>
-					<p>Your Company</p>
-				</div>`,
-	};
-	await sendEmail(mailOptions);
+	await sendForgetPasswordEmail(user.name, email, otp);
 	return createdResp("OTP Successfully sent to your email");
 };
 
@@ -201,7 +178,7 @@ const resetPass = async (body) => {
 	if (!email || !otp || !newPassword) {
 		return badRequest("invalid body");
 	}
-	const otpUser = await getDb().collection("otp").findOne({ email: email, otp: otp });
+	const otpUser = await findOtp({ email: email, otp: otp });
 	if (!otpUser) {
 		return badRequest("Either invalid otp or user not registered!!");
 	}
@@ -213,7 +190,7 @@ const resetPass = async (body) => {
 	if (!updatedObj.modifiedCount || !updatedObj.matchedCount) {
 		throw new Error("Updation failed in resetPass helper");
 	}
-	const deletedObj = await getDb().collection("otp").deleteOne({ email: otpUser.email });
+	const deletedObj = await deleteOtp({ email: otpUser.email });
 	if (!deletedObj.deletedCount || !deletedObj.acknowledged) {
 		throw new Error("deletion failed in resetPass helper");
 	}
@@ -252,4 +229,8 @@ module.exports = {
 	forgetPass,
 	resetPass,
 	updatePass,
+	findOtp,
+	updateOtp,
+	deleteOtp,
+	insertOtp,
 };
