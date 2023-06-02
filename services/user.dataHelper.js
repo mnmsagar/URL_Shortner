@@ -4,9 +4,17 @@ const { isValidPassword, isValidString, isValidEmail, hashPassword, otpGenerator
 const { badRequest, createdResp } = require("../utils/utils");
 const { sendEmail } = require("../utils/email");
 
-const existingUser = async (email) => {
-	const obj = await getDb().collection("users").findOne({ email: email });
-	return obj;
+const findUser = async (arr) => {
+	return await getDb().collection("users").findOne(arr[0], arr[1]);
+};
+const insertUser = async (obj) => {
+	return await getDb().collection("users").insertOne(obj);
+};
+const deleteUser = async (obj) => {
+	return await getDb().collection("users").deleteOne(obj);
+};
+const updateUser = async (arr) => {
+	return await getDb().collection("users").updateOne(arr[0], arr[1], arr[2]);
 };
 
 const checkBody = (body) => {
@@ -30,12 +38,10 @@ const checkBody = (body) => {
 
 const userAndPasswordCheck = async (email, password) => {
 	password = hashPassword(password);
-	const result = await getDb()
-		.collection("users")
-		.findOne(
-			{ email: email, password: password, isRegistered: true },
-			{ projection: { _id: 1, email: 1, isLoginEnabled: 1 } }
-		);
+	const result = await findUser([
+		{ email: email, password: password, isRegistered: true },
+		{ projection: { _id: 1, email: 1, isLoginEnabled: 1 } },
+	]);
 	if (!result) {
 		return {
 			message: "Invalid Credentials",
@@ -62,7 +68,7 @@ const userMail = async (body) => {
 		expiresAt: new Date(),
 		isAdmin: false,
 	};
-	const userInsert = await getDb().collection("users").insertOne(user);
+	const userInsert = await insertUser(user);
 	if (!userInsert.acknowledged) {
 		throw Error("User Insertion Error in userMail!!");
 	}
@@ -98,7 +104,7 @@ const verifyUser = async (body) => {
 	if (!otp || !email) {
 		return badRequest("Invalid Body");
 	}
-	const userExisting = await existingUser(email);
+	const userExisting = await findUser([{ email }]);
 	if (!userExisting) {
 		return badRequest(
 			"Please Signup first to get verified!! Maybe you haven't registered yet or your session expired !!"
@@ -111,9 +117,7 @@ const verifyUser = async (body) => {
 	if (!userOtp) {
 		return badRequest("Either email or OTP are incorrect or OTP expired!!, Please Check");
 	}
-	const updatedObj = await getDb()
-		.collection("users")
-		.updateOne({ email: email }, { $set: { isRegistered: true }, $unset: { expiresAt: 1 } });
+	const updatedObj = await updateUser([{ email: email }, { $set: { isRegistered: true }, $unset: { expiresAt: 1 } }]);
 	if (!updatedObj.matchedCount || !updatedObj.modifiedCount) {
 		throw new Error("Updation Error in verifyUser");
 	}
@@ -126,7 +130,7 @@ const verifyUser = async (body) => {
 
 const resendOtp = async (body) => {
 	const { email } = body;
-	const user = await existingUser(email);
+	const user = await findUser([{ email }]);
 	const otp = otpGenerator();
 	if (!user) {
 		return badRequest("Session expired or user not signedUp");
@@ -162,7 +166,7 @@ const forgetPass = async (email) => {
 	if (!isValidEmail(email)) {
 		return badRequest("invalid email !!");
 	}
-	const user = await getDb().collection("users").findOne({ email: email, isRegistered: true });
+	const user = await findUser([{ email: email, isRegistered: true }]);
 	if (!user) {
 		return badRequest("User not registered !!");
 	}
@@ -170,7 +174,6 @@ const forgetPass = async (email) => {
 	const updatedOtp = await getDb()
 		.collection("otp")
 		.updateOne({ email: email }, { $set: { otp: otp, expiresAt: Date.now() } }, { upsert: true });
-	console.log(updatedOtp);
 	if ((!updatedOtp.matchedCount || !updatedOtp.modifiedCount) && !updatedOtp.upsertedCount) {
 		throw new Error("Error in updation/upsert in forget password !!");
 	}
@@ -203,9 +206,10 @@ const resetPass = async (body) => {
 		return badRequest("Either invalid otp or user not registered!!");
 	}
 	const hashedPassword = hashPassword(newPassword);
-	const updatedObj = await getDb()
-		.collection("users")
-		.updateOne({ email: otpUser.email, isRegistered: true }, { $set: { password: hashedPassword } });
+	const updatedObj = await updateUser([
+		{ email: otpUser.email, isRegistered: true },
+		{ $set: { password: hashedPassword } },
+	]);
 	if (!updatedObj.modifiedCount || !updatedObj.matchedCount) {
 		throw new Error("Updation failed in resetPass helper");
 	}
@@ -213,13 +217,13 @@ const resetPass = async (body) => {
 	if (!deletedObj.deletedCount || !deletedObj.acknowledged) {
 		throw new Error("deletion failed in resetPass helper");
 	}
-	return badRequest("password succesfully updated!!");
+	return createdResp("password succesfully updated!!");
 };
 
 const updatePass = async (email, oldPassword, newPassword) => {
-	const user = await getDb().collection("users").findOne({ email: email });
 	const hashedOldPassword = hashPassword(oldPassword);
-	if (user.password !== hashedOldPassword) {
+	const user = await findUser([{ email: email, password: hashedOldPassword }]);
+	if (!user) {
 		return badRequest("old password is incorrect");
 	}
 	if (!isValidPassword(newPassword)) {
@@ -228,9 +232,7 @@ const updatePass = async (email, oldPassword, newPassword) => {
 		);
 	}
 	const hashedNewPassword = hashPassword(newPassword);
-	const updatedObj = await getDb()
-		.collection("users")
-		.updateOne({ email: email }, { $set: { password: hashedNewPassword } });
+	const updatedObj = await updateUser([{ email: email }, { $set: { password: hashedNewPassword } }]);
 	if (!updatedObj.modifiedCount || !updatedObj.matchedCount) {
 		throw new Error("updation failed in updatePass helper!!");
 	}
@@ -238,7 +240,10 @@ const updatePass = async (email, oldPassword, newPassword) => {
 };
 
 module.exports = {
-	existingUser,
+	findUser,
+	deleteUser,
+	updateUser,
+	insertUser,
 	checkBody,
 	userAndPasswordCheck,
 	userMail,
