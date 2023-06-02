@@ -15,6 +15,13 @@ const { isValidEmail, tokenGeneration } = require("../utils/utils");
 exports.userlogin = async (req, res) => {
 	const { email, password } = req.body;
 	try {
+		if (!email || !password) {
+			res.status(400).json({
+				status: "failed",
+				message: "Invalid body !!",
+			});
+			return;
+		}
 		if (!isValidEmail(email)) {
 			res.status(400).json({
 				status: "failed",
@@ -39,14 +46,21 @@ exports.userlogin = async (req, res) => {
 
 exports.signUp = async (req, res) => {
 	try {
-		const { email } = req.body;
+		const { email, password, name } = req.body;
+		if (!email || !password || !name) {
+			res.status(400).json({
+				status: "failed",
+				message: "invalid body !!",
+			});
+			return;
+		}
 		const result = checkBody(req.body);
 		if (result.message) {
 			res.status(result.statusCode).json(result.message);
 			return;
 		}
 
-		const existUser = await findUser({ email });
+		const existUser = await findUser([{ email }]);
 		if (existUser) {
 			res.status(409).json({
 				message: "User already Exists",
@@ -90,7 +104,10 @@ exports.resendOtp = async (req, res) => {
 	try {
 		const { email } = req.body;
 		if (!email) {
-			res.status(400).json({ message: "Enter email please!" });
+			res.status(400).json({
+				status: "failed",
+				message: "invalid body",
+			});
 			return;
 		}
 		const resendObj = await resendOtp(req.body);
@@ -136,6 +153,13 @@ exports.confmForgetPass = async (req, res) => {
 exports.updatePassword = async (req, res) => {
 	try {
 		const { email } = req.user;
+		if (!email) {
+			res.status(400).json({
+				status: "failed",
+				message: "invalid body",
+			});
+			return;
+		}
 		const { oldPassword, newPassword } = req.body;
 		const obj = await updatePass(email, oldPassword, newPassword);
 		res.status(obj.statusCode).json(obj.message);
