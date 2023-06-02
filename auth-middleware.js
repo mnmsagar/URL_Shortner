@@ -8,9 +8,9 @@ exports.checkUserAuth = async (req, res, next) => {
 			// console.log(req.user);
 			next();
 		} catch (error) {
+			console.error(error);
 			res.status(401).json({
 				message: "Unauthorised User",
-				error: error,
 			});
 		}
 	} else {
