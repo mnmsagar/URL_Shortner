@@ -8,7 +8,7 @@ module.exports = {
 		console.log("Connected to Database");
 		dbConnection = client.db("url");
 		await dbConnection.collection("users").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 100 });
-		await dbConnection.collection("otp").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 20 });
+		await dbConnection.collection("otp").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 60 });
 	},
 	getClient: () => {
 		return client;
