@@ -1,8 +1,15 @@
 const { MongoMemoryServer } = require("mongodb-memory-server");
 const { connectToDb, getDb } = require("../connection");
-const { checkBody, userAndPasswordCheck } = require("../services/user.dataHelper");
-const { beforeAll, expect, afterAll } = require("@jest/globals");
-const { verifyUser, userMail } = require("../services/user.dataHelper");
+const {
+	checkBody,
+	userAndPasswordCheck,
+	updatePass,
+	forgetPass,
+	verifyUser,
+	userMail,
+	resetPass,
+} = require("../services/user.dataHelper");
+const { beforeAll, expect, afterAll, describe, test } = require("@jest/globals");
 const { generate } = require("otp-generator");
 const { ObjectId } = require("mongodb");
 const { isValidEmail, findOTP, isValidString, isValidPassword } = require("../utils/utils");
@@ -201,5 +208,109 @@ describe("isValidPassword", () => {
 		expect(isValidPassword(pass1)).toBe(true);
 		const pass2 = "12345678";
 		expect(isValidPassword(pass2)).toBe(false);
+	});
+});
+
+describe("updatePassword", () => {
+	beforeAll(async () => {
+		await userMail(mockUserData);
+		await getDb()
+			.collection("otp")
+			.updateOne({ email: mockUserData.email }, { $set: { otp: "123456" } });
+		await verifyUser({ email: mockUserData.email, otp: "123456" });
+	});
+
+	afterAll(async () => {
+		await getDb().collection("otp").deleteMany({ email: mockUserData.email });
+		await getDb().collection("users").deleteMany({ email: mockUserData.email });
+	});
+
+	test("should return badRequest if old password is incorrect", async () => {
+		const body = {
+			oldPassword: "Sam@1234",
+			newPassword: "Prateek@123",
+		};
+		const updatedPassObj = await updatePass(mockUserData.email, body.oldPassword, body.newPassword);
+		expect(updatedPassObj.statusCode).toBe(400);
+	});
+	test("should return badRequest if new password is invalid", async () => {
+		const body = {
+			oldPassword: "Sagar@123",
+			newPassword: "Prateek",
+		};
+		const updatedPassObj = await updatePass(mockUserData.email, body.oldPassword, body.newPassword);
+		expect(updatedPassObj.statusCode).toBe(400);
+	});
+	test("should update password and return created response", async () => {
+		const body = {
+			oldPassword: "Sagar@123",
+			newPassword: "Prateek@123",
+		};
+		const updatedPassObj = await updatePass(mockUserData.email, body.oldPassword, body.newPassword);
+		expect(updatedPassObj.statusCode).toBe(201);
+	});
+});
+
+describe("resetPass", () => {
+	beforeAll(async () => {
+		await userMail(mockUserData);
+		await getDb()
+			.collection("otp")
+			.updateOne({ email: mockUserData.email }, { $set: { otp: "123456" } });
+		await verifyUser({ email: mockUserData.email, otp: "123456" });
+	});
+	test("should return 'invalid body' when body is missing required fields", async () => {
+		await forgetPass(mockUserData.email);
+		await getDb()
+			.collection("otp")
+			.updateOne({ email: mockUserData.email }, { $set: { otp: "123456" } });
+		const body = {
+			email: mockUserData.email,
+			otp: "123456",
+		};
+		const resetPassObj = await resetPass(body);
+		expect(resetPassObj.statusCode).toBe(400);
+	});
+
+	test("should return 'Either invalid otp or user not registered!!' when otpUser is not found", async () => {
+		await forgetPass(mockUserData.email);
+		await getDb()
+			.collection("otp")
+			.updateOne({ email: mockUserData.email }, { $set: { otp: "123456" } });
+
+		const invalidOtp = {
+			email: mockUserData.email,
+			otp: "876548",
+			newPassword: "Prateek@123",
+		};
+		const resetPassObj1 = await resetPass(invalidOtp);
+		expect(resetPassObj1.statusCode).toBe(400);
+
+		const unRegisteredUser = {
+			email: `${generate(7, {
+				upperCaseAlphabets: false,
+				specialChars: false,
+				digits: false,
+				lowerCaseAlphabets: true,
+			})}@amozix.com`,
+			otp: "123456",
+			newPassword: "Prateek@123",
+		};
+		const resetPassObj2 = await resetPass(unRegisteredUser);
+		expect(resetPassObj2.statusCode).toBe(400);
+	});
+
+	test("should return 'password successfully updated!!' when all operations succeed", async () => {
+		await forgetPass(mockUserData.email);
+		await getDb()
+			.collection("otp")
+			.updateOne({ email: mockUserData.email }, { $set: { otp: "123456" } });
+		const body = {
+			email: mockUserData.email,
+			otp: "123456",
+			newPassword: "Prateek@123",
+		};
+		const resetPassObj = await resetPass(body);
+		expect(resetPassObj.statusCode).toBe(201);
 	});
 });
